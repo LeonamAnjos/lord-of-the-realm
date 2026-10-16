@@ -1,0 +1,892 @@
+<title>Fief &amp; Crown</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=IM+Fell+English+SC&display=swap">
+<style>
+/* Layout: one phone-width column. Sticky treasury bar, hex map of twelve counties, tabbed ledger below, season dock pinned to the bottom. */
+:root {
+  color-scheme: dark;
+  --bg: #0f1311;
+  --bg2: #151b17;
+  --panel: #1a211c;
+  --panel2: #232d26;
+  --line: #34423a;
+  --fg: #ece7d8;
+  --muted: #9aa797;
+  --dim: #6d7a6b;
+  --gold: #dcb250;
+  --grain: #bccb6c;
+  --wood: #c28d62;
+  --iron: #96abc2;
+  --good: #75c47c;
+  --warn: #e3ad43;
+  --bad: #ea7060;
+  --o0: #c0412b; --o0d: #55291f;
+  --o1: #4f86d0; --o1d: #263e5c;
+  --o2: #43a877; --o2d: #1e4a37;
+  --o3: #9b6bd0; --o3d: #43305e;
+  --display: 'IM Fell English SC', 'Iowan Old Style', Georgia, serif;
+  --body: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body {
+  margin: 0;
+  color: var(--fg);
+  font: 400 16px/1.4 var(--body);
+  font-variant-numeric: tabular-nums lining-nums;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 112px;
+  -webkit-tap-highlight-color: transparent;
+}
+.shell { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+button { font: inherit; color: inherit; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+/* Treasury bar */
+.hud { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding: 10px 0 10px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.hud-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font: 400 22px/1 var(--display); letter-spacing: .05em; }
+.season { text-align: right; min-width: 0; }
+.season b { font-weight: 700; }
+.season .yr { color: var(--muted); margin-left: 6px; }
+.season small { display: block; color: var(--muted); font-size: 12px; line-height: 1.2; }
+.pips { display: flex; gap: 3px; justify-content: flex-end; margin-top: 4px; }
+.pips i { width: 18px; height: 3px; background: var(--line); border-radius: 2px; }
+.pips i.on { background: var(--fg); }
+.res { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.r { min-width: 0; }
+.r .lab { display: block; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; }
+.r b { font-size: 21px; font-weight: 700; line-height: 1.1; }
+.r i { font-style: normal; font-size: 12px; margin-left: 4px; }
+.r-gold .lab { color: var(--gold); } .r-grain .lab { color: var(--grain); } .r-wood .lab { color: var(--wood); } .r-iron .lab { color: var(--iron); }
+.up { color: var(--good); } .dn { color: var(--bad); }
+.alert { font-size: 13px; color: var(--warn); }
+
+/* Map */
+.map-wrap { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 4px 4px 8px; }
+svg#map { width: 100%; height: auto; display: block; }
+.hex { cursor: pointer; --oc: var(--o0); --od: var(--o0d); }
+.hex.o1 { --oc: var(--o1); --od: var(--o1d); }
+.hex.o2 { --oc: var(--o2); --od: var(--o2d); }
+.hex.o3 { --oc: var(--o3); --od: var(--o3d); }
+.hex polygon { fill: var(--od); stroke: var(--oc); stroke-width: 1.5; }
+.hex.sel polygon { stroke: var(--fg); stroke-width: 3; }
+.hex.tgt polygon { stroke: var(--fg); stroke-width: 2; stroke-dasharray: 5 3; }
+.hex:focus-visible polygon { stroke: var(--fg); stroke-width: 3; }
+.hex .keep, .hex .ico { fill: var(--oc); }
+.hex text { fill: var(--fg); font: 700 10.5px var(--body); text-anchor: middle; pointer-events: none; }
+.hex text.n { font-weight: 500; font-size: 10px; text-anchor: start; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 2px 10px 0; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* Tabs */
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+.tabs button { background: none; border: 0; border-radius: 7px; min-height: 42px; color: var(--muted); font-weight: 500; letter-spacing: .02em; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--panel2); color: var(--fg); font-weight: 700; }
+
+/* Cards */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.ch { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ch h2 { margin: 0; font: 400 24px/1.1 var(--display); letter-spacing: .03em; }
+.dotc { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.tag { margin-left: auto; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.stat label { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.stat b { font-size: 20px; }
+.stat small { color: var(--muted); margin-left: 3px; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 7px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 13px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+.chip b { color: var(--fg); font-weight: 500; letter-spacing: .1em; margin-left: 4px; }
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.row .grow { flex: 1; min-width: 0; }
+.row .grow b { display: block; font-weight: 700; }
+.row .grow small { color: var(--muted); font-size: 13px; display: block; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper output { min-width: 42px; text-align: center; font-weight: 700; }
+.btn { min-height: 40px; min-width: 40px; padding: 0 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-weight: 500; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: .38; cursor: default; }
+.btn.primary { background: var(--o0); border-color: var(--o0); color: var(--fg); font-weight: 700; }
+.btn.sm { min-height: 36px; padding: 0 10px; font-size: 14px; }
+.btn.good { border-color: var(--good); } .btn.fair { border-color: var(--warn); } .btn.risky { border-color: var(--bad); }
+.btn.on { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
+.order { padding: 10px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+.order .t { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.order .t span { color: var(--muted); font-size: 13px; }
+.order .go { display: flex; gap: 6px; flex-wrap: wrap; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--fg); font-weight: 700; text-decoration: underline; text-decoration-color: var(--dim); text-underline-offset: 3px; cursor: pointer; }
+.note { color: var(--muted); font-size: 13.5px; margin: 0; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.log { display: flex; flex-direction: column; gap: 0; }
+.log div { display: grid; grid-template-columns: 62px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.log div:first-child { border-top: 0; }
+.log time { color: var(--dim); font-size: 13px; }
+.log .good { color: var(--good); } .log .bad { color: var(--bad); }
+
+/* Split orders, tile jobs */
+.split { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.chipset { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.hex text.jobs { font-size: 9px; font-weight: 700; }
+.hex .jf { fill: var(--grain); } .hex .jw { fill: var(--wood); } .hex .ji { fill: var(--iron); } .hex .jc { fill: var(--gold); }
+.jobkey { flex-basis: 100%; }
+.jobkey b { font-weight: 700; margin-left: 4px; }
+/* Dock, sheet, toast */
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--bg); border-top: 1px solid var(--line); padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.dock-in { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+.dock-in .info { flex: 1; min-width: 0; font-size: 13.5px; color: var(--muted); line-height: 1.25; }
+.dock-in .info b { color: var(--fg); font-size: 16px; display: block; }
+.dock .btn.primary { min-height: 48px; padding: 0 22px; font-size: 17px; }
+.sheet-bg { position: fixed; inset: 0; z-index: 10; background: rgba(5, 8, 6, .62); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 560px; max-height: 82%; overflow-y: auto; background: var(--panel2); border: 1px solid var(--line); border-radius: 16px 16px 0 0; padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 12px; }
+.sheet h2 { margin: 0; font: 400 26px/1.1 var(--display); letter-spacing: .03em; }
+.sheet p { margin: 0; }
+.sheet ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.sheet .big { font-size: 18px; font-weight: 700; }
+.sheet .btn { width: 100%; min-height: 46px; }
+.toast { position: fixed; z-index: 8; left: 50%; transform: translateX(-50%); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); max-width: min(92vw, 520px); background: var(--panel2); border: 1px solid var(--muted); border-radius: 8px; padding: 9px 14px; font-size: 14.5px; text-align: center; }
+@media (prefers-reduced-motion: no-preference) { .toast { animation: rise .18s ease-out; } @keyframes rise { from { opacity: 0; transform: translate(-50%, 6px); } } }
+</style>
+
+<div class="shell">
+  <header class="hud">
+    <div class="hud-top">
+      <h1>Fief &amp; Crown</h1>
+      <div class="season" id="season"></div>
+    </div>
+    <div class="res" id="res"></div>
+    <div class="alert" id="alert" hidden></div>
+  </header>
+  <section class="map-wrap">
+    <svg id="map" viewBox="0 0 400 262" role="group" aria-label="Map of twelve counties"></svg>
+    <div class="legend" id="legend"></div>
+  </section>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Ledger">
+    <button role="tab" data-act="tab" data-tab="county">County</button>
+    <button role="tab" data-act="tab" data-tab="realm">Realm</button>
+    <button role="tab" data-act="tab" data-tab="chronicle">Chronicle</button>
+  </nav>
+  <section id="panel"></section>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <div class="info" id="dockInfo"></div>
+    <button class="btn primary" id="endBtn" data-act="end">End season</button>
+  </div>
+</div>
+<div class="sheet-bg" id="sheetBg" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+'use strict';
+var $ = function (s) { return document.querySelector(s); };
+var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+var rr = function (a, b) { return a + Math.random() * (b - a); };
+var KEY = 'fief-and-crown-v1';
+
+var SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
+var FARM_MULT = [0.8, 1.1, 2.2, 0];
+var WOOD_MULT = [1, 1, 1, 0.6];
+var SEASON_NOTE = ['Sowing: farms yield little', 'Farms yield well', 'Harvest: farms yield double', 'Winter: farms yield nothing'];
+var GRAIN_SEASON = [1, 0.9, 0.6, 1.5];
+var BASE = { grain: 2, wood: 3, iron: 7 };
+var KINDS = ['spear', 'archer', 'knight'];
+var U = {
+  spear:  { n: 'Spearmen', one: 'spearman', atk: 1, def: 3, gold: 6,  wood: 1, iron: 0, up: 0.2, d: 'Cheap, hold the line' },
+  archer: { n: 'Archers',  one: 'archer',   atk: 4, def: 1, gold: 8,  wood: 2, iron: 0, up: 0.3, d: 'Cheap strikers, weak when pressed' },
+  knight: { n: 'Knights',  one: 'knight',   atk: 9, def: 6, gold: 24, wood: 0, iron: 3, up: 0.8, d: 'Decisive, but they need iron' }
+};
+var TAX = [{ n: 'None', g: 0, m: 5 }, { n: 'Low', g: 0.2, m: 1 }, { n: 'Normal', g: 0.4, m: -3 }, { n: 'High', g: 0.7, m: -9 }];
+var FORT = [{ w: 12, i: 4, g: 40 }, { w: 20, i: 8, g: 70 }, { w: 30, i: 12, g: 100 }];
+var DEF = [
+  ['Greywater', 0.9, 0.8, 0.4], ['Harrowdale', 1.1, 0.7, 0.2], ['Larkholt', 1.2, 0.8, 0], ['Eastholme', 1, 1.1, 0.3],
+  ['Ashdown', 1.1, 1, 0.8], ['Ironby', 0.7, 0.7, 1.4], ['Caldbeck', 1, 0.9, 0.6], ['Fenwick', 1.3, 0.6, 0],
+  ['Brackenmoor', 1, 1.2, 0.3], ['Dunmere', 1.2, 0.8, 0.4], ['Kestrelmoor', 0.8, 1, 0.9], ['Marrowmere', 1.1, 0.9, 0.5]
+];
+var OWN = [1, 1, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3];
+var RATION = [{ n: 'Scant', a: 0.3, m: -8 }, { n: 'Normal', a: 0.5, m: 0 }, { n: 'Generous', a: 0.7, m: 6 }];
+var FARM_LIMIT = [70, 60, 80, 0];
+var COLS = 4, ROWS = 3, NC = 12;
+var LORD_COL = ['o0', 'o1', 'o2', 'o3'];
+
+/* Hex geometry: pointy-top, odd rows shifted right */
+var R = 50, HW = Math.sqrt(3) * R, OX = (400 - HW * 4.5) / 2, OY = 6;
+function center(i) { var r = Math.floor(i / COLS), c = i % COLS; return { x: OX + HW * (c + 0.5 + (r % 2 ? 0.5 : 0)), y: OY + R + 1.5 * R * r }; }
+function hexPts(x, y, rad) { var p = []; for (var k = 0; k < 6; k++) { var a = (60 * k - 30) * Math.PI / 180; p.push((x + rad * Math.cos(a)).toFixed(1) + ',' + (y + rad * Math.sin(a)).toFixed(1)); } return p.join(' '); }
+var NB = (function () {
+  var out = [];
+  for (var i = 0; i < NC; i++) {
+    var r = Math.floor(i / COLS), c = i % COLS, odd = r % 2 === 1;
+    var d = odd ? [[0, -1], [0, 1], [-1, 0], [-1, 1], [1, 0], [1, 1]] : [[0, -1], [0, 1], [-1, -1], [-1, 0], [1, -1], [1, 0]];
+    var list = [];
+    d.forEach(function (v) { var nr = r + v[0], nc = c + v[1]; if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) list.push(nr * COLS + nc); });
+    out.push(list);
+  }
+  return out;
+})();
+
+/* ---------- State ---------- */
+var state;
+function zero() { return { spear: 0, archer: 0, knight: 0 }; }
+function newState() {
+  var lords = [
+    { name: 'House Thorne', short: 'You', tax: 2, alive: true, stock: { gold: 150, grain: 210, wood: 40, iron: 12 } },
+    { name: 'Baron Hugh Marlow', short: 'Baron Hugh', tax: 2, alive: true, stock: { gold: 150, grain: 210, wood: 40, iron: 12 } },
+    { name: 'Lady Isolde Vance', short: 'Lady Isolde', tax: 2, alive: true, stock: { gold: 150, grain: 210, wood: 40, iron: 12 } },
+    { name: 'Earl Godfrey Ashby', short: 'Earl Godfrey', tax: 2, alive: true, stock: { gold: 150, grain: 210, wood: 40, iron: 12 } }
+  ];
+  var C = DEF.map(function (d, i) {
+    return { id: i, name: d[0], f: d[1], w: d[2], i: d[3], owner: OWN[i], pop: Math.round(88 + Math.random() * 24), mood: 65,
+      work: { farm: 45, wood: 15, mine: d[3] >= 0.6 ? 20 : d[3] === 0 ? 0 : 5 }, g: { spear: 6, archer: 2, knight: 0 }, arr: zero(), fort: 0, tax: 2, ration: 1, farmPref: 45 };
+  });
+  return { v: 1, turn: 0, lords: lords, C: C, market: { grain: 1, wood: 1, iron: 1 }, over: null, sel: 4, tab: 'county', help: false,
+    log: [{ t: 0, k: '', txt: 'You hold Ashdown, Brackenmoor and Dunmere. Eleven more counties, three rival lords. Take them all and the crown is yours.' }] };
+}
+function load() {
+  try {
+    var s = JSON.parse(localStorage.getItem(KEY));
+    if (!(s && s.v === 1 && s.C && s.C.length === NC)) return null;
+    s.C.forEach(function (c) { if (c.i === 0) c.work.mine = 0; if (c.tax === undefined) c.tax = s.lords[c.owner].tax; if (!c.mus) c.mus = { spear: c.arr.spear, archer: c.arr.archer, knight: c.arr.knight }; });
+    return s;
+  } catch (e) { return null; }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+/* ---------- Core model ---------- */
+function season() { return state.turn % 4; }
+function year() { return 1100 + Math.floor(state.turn / 4); }
+function counties(o) { return state.C.filter(function (c) { return c.owner === o; }); }
+function troops(c) { return c.g.spear + c.g.archer + c.g.knight; }
+function atkOf(g) { return g.spear * U.spear.atk + g.archer * U.archer.atk + g.knight * U.knight.atk; }
+function defOf(g) { return g.spear * U.spear.def + g.archer * U.archer.def + g.knight * U.knight.def; }
+function fortMult(c) { return 1.15 + 0.2 * c.fort; }
+function defence(c) { return (defOf(c.g) + c.pop / 10) * fortMult(c); }
+function capOf(c) { return 100 + 70 * c.f; }
+function movable(c) { var m = {}; KINDS.forEach(function (k) { m[k] = Math.max(0, c.g[k] - c.arr[k]); }); return m; }
+function total(g) { return g.spear + g.archer + g.knight; }
+function splitUnits(m, p) {
+  var r = zero();
+  KINDS.forEach(function (k) { r[k] = Math.min(m[k], Math.ceil(m[k] * (p[k] || 0) / 100)); });
+  return r;
+}
+function pick(m, mode) {
+  var r = zero();
+  if (mode && typeof mode === 'object') return splitUnits(m, mode);
+  if (mode === 'all') KINDS.forEach(function (k) { r[k] = m[k]; });
+  else if (mode === 'half') KINDS.forEach(function (k) { r[k] = Math.ceil(m[k] / 2); });
+  else { r.archer = m.archer; r.knight = m.knight; }
+  return r;
+}
+function prod(c, s) {
+  var f = 0.6 + 0.4 * c.mood / 100;
+  return {
+    grain: c.pop * c.work.farm / 100 * 1.3 * c.f * FARM_MULT[s] * f,
+    wood: c.pop * c.work.wood / 100 * c.w * WOOD_MULT[s] * f,
+    iron: c.pop * c.work.mine / 100 * 0.7 * c.i * f
+  };
+}
+function eat(c) { return (c.pop + troops(c)) * RATION[c.ration === undefined ? 1 : c.ration].a; }
+function realmFed() {
+  var cs = counties(0), s = season(), g = state.lords[0].stock.grain;
+  cs.forEach(function (c) { g += prod(c, s).grain - eat(c); });
+  return g >= 0;
+}
+function moodDelta(c) {
+  var r = RATION[c.ration === undefined ? 1 : c.ration];
+  var d = TAX[c.tax].m + (realmFed() ? 2 + r.m : -15);
+  return clamp(c.mood + d, 0, 100) - c.mood;
+}
+function moodNote(c) {
+  var d = Math.round(moodDelta(c)), fed = realmFed();
+  var t = (d >= 0 ? '+' : '') + d + ' a season';
+  if (!fed) t += ', famine';
+  else if (c.mood + d < 20 && d < 0) t += ', unrest soon';
+  return '<small style="display:block;margin:4px 0 0;color:' + (d > 0 ? 'var(--good)' : d < 0 ? 'var(--bad)' : 'var(--muted)') + '">' + t + '</small>';
+}
+/* Expected change in people this season at a given mood (a real number; the game carries the fraction forward). */
+function popRate(c, mood, fed) {
+  mood = clamp(mood, 0, 100);
+  var cap = capOf(c), d = 0;
+  if (fed && c.pop < cap) d += c.pop * 0.12 * clamp((mood - 40) / 30, 0, 1.5) * (1 - c.pop / cap);
+  if (mood < 40) d -= c.pop * (40 - mood) * 0.00075;
+  if (mood < 20) d -= c.pop * 0.03;
+  return d;
+}
+function popNote(c) {
+  var t, col = 'var(--muted)';
+  if (!realmFed()) { t = 'famine'; col = 'var(--bad)'; }
+  else {
+    var d = popRate(c, c.mood + moodDelta(c), true);
+    if (c.pop >= capOf(c) && d > -0.05) t = 'at the cap';
+    else if (d >= 0.5) { t = '+' + Math.round(d) + ' a season'; col = 'var(--good)'; }
+    else if (d <= -0.5) { t = '−' + Math.round(-d) + ' a season'; col = 'var(--bad)'; }
+    else if (d > 0.05) { t = 'growing slowly'; col = 'var(--good)'; }
+    else if (d < -0.05) { t = 'shrinking slowly'; col = 'var(--bad)'; }
+    else t = 'steady';
+  }
+  return '<small style="display:block;margin:4px 0 0;color:' + col + '">' + t + '</small>';
+}
+function upkeep(c) { return KINDS.reduce(function (a, k) { return a + U[k].up * c.g[k]; }, 0); }
+function idlePct(c) { return 100 - c.work.farm - c.work.wood - c.work.mine; }
+/* Most people the fields can use in a season. Better soil supports more. */
+function farmLimit(c, s) { s = s === undefined ? season() : s; return Math.min(100, Math.floor(FARM_LIMIT[s] * (0.6 + 0.4 * c.f) / 5) * 5); }
+function applyFarmLimit(c) {
+  var want = c.farmPref === undefined ? c.work.farm : c.farmPref;
+  var free = 100 - c.work.wood - c.work.mine;
+  var nf = Math.max(0, Math.min(want, farmLimit(c), free)), old = c.work.farm;
+  c.work.farm = nf;
+  return old > nf ? Math.round(c.pop * (old - nf) / 100) : 0;
+}
+function seasonStart() {
+  var moved = 0, n = 0;
+  counties(0).forEach(function (c) { var m = applyFarmLimit(c); if (m > 0) { moved += m; n++; } });
+  if (moved > 0) logEv(SEASONS[season()] + ': ' + moved + ' farmers in ' + n + (n === 1 ? ' county have' : ' counties have') + ' no fields to work and now earn gold at the crafts.');
+  return moved;
+}
+function craft(c) { return c.pop * idlePct(c) / 100 * 0.15; }
+function taxGold(c) { return c.pop * TAX[c.tax].g; }
+function forecast(l) {
+  var s = season(), o = { gold: 0, grain: 0, wood: 0, iron: 0 };
+  counties(l).forEach(function (c) {
+    var p = prod(c, s);
+    o.grain += p.grain - eat(c); o.wood += p.wood; o.iron += p.iron; o.gold += taxGold(c) + craft(c) - upkeep(c);
+  });
+  return o;
+}
+function lordName(l) { return l === 0 ? 'You' : state.lords[l].short; }
+function logEv(txt, k) { state.log.push({ t: state.turn, k: k || '', txt: txt }); if (state.log.length > 80) state.log.shift(); }
+function stamp(t) { return SEASONS[t % 4].slice(0, 3) + ' ' + (1100 + Math.floor(t / 4)); }
+function estNoise(c) { return ((state.turn * 7 + c.id * 13) % 31 - 15) / 100; }
+function round5(v) { return Math.max(5, Math.round(v / 5) * 5); }
+function estDef(c) { return round5(defence(c) * (1 + estNoise(c))); }
+function bordersYou(c) { return NB[c.id].some(function (n) { return state.C[n].owner === 0; }); }
+function fmtUnits(g) {
+  var parts = [];
+  KINDS.forEach(function (k) { if (g[k] > 0) parts.push(g[k] + ' ' + (g[k] === 1 ? U[k].one : U[k].n.toLowerCase())); });
+  return parts.length ? parts.join(', ') : 'none';
+}
+function canAfford(l, k, n) { var st = state.lords[l].stock, u = U[k]; return st.gold >= u.gold * n && st.wood >= u.wood * n && st.iron >= u.iron * n; }
+function recruit(c, k, n) {
+  if (!canAfford(c.owner, k, n) || c.pop - n < 30) return false;
+  var st = state.lords[c.owner].stock, u = U[k];
+  st.gold -= u.gold * n; st.wood -= u.wood * n; st.iron -= u.iron * n;
+  c.pop -= n; c.g[k] += n; c.arr[k] += n;
+  c.mus = c.mus || zero(); c.mus[k] += n;
+  return true;
+}
+function unmuster(c, k, n) {
+  var m = c.mus ? c.mus[k] : 0;
+  n = Math.min(n, m, c.g[k], c.arr[k]);
+  if (n <= 0) return false;
+  var st = state.lords[c.owner].stock, u = U[k];
+  st.gold += u.gold * n; st.wood += u.wood * n; st.iron += u.iron * n;
+  c.pop += n; c.g[k] -= n; c.arr[k] -= n; c.mus[k] -= n;
+  return true;
+}
+function applyLoss(g, cf, lost) {
+  var rem = zero();
+  KINDS.forEach(function (k) { var l = Math.round(g[k] * cf); lost[k] = l; rem[k] = g[k] - l; });
+  return rem;
+}
+
+/* ---------- Combat ---------- */
+function battle(from, to, m) {
+  var atk = atkOf(m) * rr(0.9, 1.1), def = defence(to) * rr(0.9, 1.1);
+  var rep = { from: from.name, to: to.name, att: from.owner, dfn: to.owner, atk: Math.round(atk), def: Math.round(def), won: atk > def, sent: m, lostA: zero(), lostD: zero(), turn: state.turn };
+  if (atk > def) {
+    var surv = applyLoss(m, clamp(0.8 * def / atk, 0.1, 0.8), rep.lostA);
+    if (total(surv) === 0) { var big = KINDS.slice().sort(function (a, b) { return m[b] - m[a]; })[0]; surv[big] = 1; rep.lostA[big] = Math.max(0, rep.lostA[big] - 1); }
+    KINDS.forEach(function (k) { rep.lostD[k] = to.g[k]; });
+    to.mus = zero(); to.tax = 2; to.ration = 1; to.owner = from.owner; to.g = surv; to.arr = { spear: surv.spear, archer: surv.archer, knight: surv.knight };
+    to.pop = Math.max(30, Math.round(to.pop * 0.85)); to.mood = 25; to.fort = Math.max(0, to.fort - 1);
+    to.work = { farm: 45, wood: 15, mine: to.i >= 0.6 ? 20 : to.i === 0 ? 0 : 5 };
+    to.farmPref = 45; applyFarmLimit(to);
+  } else {
+    to.g = applyLoss(to.g, clamp(0.8 * atk / def, 0.1, 0.8), rep.lostD);
+    KINDS.forEach(function (k) { var back = Math.floor(m[k] * 0.1); from.g[k] += back; from.arr[k] += back; rep.lostA[k] = m[k] - back; });
+  }
+  return rep;
+}
+function battleLog(rep) {
+  var a = lordName(rep.att), d = lordName(rep.dfn);
+  if (rep.att === 0) return rep.won ? 'You took ' + rep.to + ' from ' + d + '.' : 'Your attack on ' + rep.to + ' failed.';
+  if (rep.dfn === 0) return rep.won ? a + ' took ' + rep.to + ' from you.' : 'You held ' + rep.to + ' against ' + a + '.';
+  return rep.won ? a + ' took ' + rep.to + ' from ' + d + '.' : d + ' held ' + rep.to + ' against ' + a + '.';
+}
+function checkElim() {
+  for (var l = 1; l < 4; l++) {
+    var L = state.lords[l];
+    if (L.alive && counties(l).length === 0) { L.alive = false; logEv(L.name + ' has lost every county. Their house is no more.', 'good'); }
+  }
+  var mine = counties(0).length;
+  if (!state.over) { if (mine === 0) state.over = 'lost'; else if (mine === NC) state.over = 'won'; }
+}
+var pending = [];
+function doSend(from, to, mode) {
+  var m = pick(movable(from), mode);
+  if (!total(m)) return null;
+  KINDS.forEach(function (k) { from.g[k] -= m[k]; });
+  if (to.owner === from.owner) {
+    KINDS.forEach(function (k) { to.g[k] += m[k]; to.arr[k] += m[k]; });
+    if (from.owner === 0) logEv('Marched ' + fmtUnits(m) + ' from ' + from.name + ' to ' + to.name + '.');
+    return { move: true, m: m };
+  }
+  var rep = battle(from, to, m);
+  logEv(battleLog(rep), rep.att === 0 ? (rep.won ? 'good' : 'bad') : (rep.dfn === 0 ? (rep.won ? 'bad' : 'good') : ''));
+  checkElim();
+  if (rep.dfn === 0 && rep.att !== 0) pending.push(rep);
+  return rep;
+}
+
+/* ---------- Rivals ---------- */
+function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function enemyNb(c) { return NB[c.id].map(function (i) { return state.C[i]; }).filter(function (n) { return n.owner !== c.owner; }); }
+function frontierStep(c, l) {
+  var seen = {}; seen[c.id] = 1; var q = [[c.id, null]];
+  while (q.length) {
+    var it = q.shift();
+    for (var x = 0; x < NB[it[0]].length; x++) {
+      var n = NB[it[0]][x]; if (seen[n]) continue; seen[n] = 1;
+      if (state.C[n].owner !== l) continue;
+      var f = it[1] === null ? n : it[1];
+      if (NB[n].some(function (z) { return state.C[z].owner !== l; })) return f;
+      q.push([n, f]);
+    }
+  }
+  return null;
+}
+function aiRecruit(l) {
+  var L = state.lords[l], cs = counties(l);
+  var front = cs.filter(function (c) { return enemyNb(c).length > 0; });
+  var pool = front.length ? front : cs;
+  var budget = L.stock.gold - 35, guard = 0;
+  while (budget >= 6 && guard++ < 40) {
+    var c = pool[Math.floor(Math.random() * pool.length)];
+    if (c.pop < 45) continue;
+    var r = Math.random(), order = r < 0.4 ? ['knight', 'archer', 'spear'] : r < 0.7 ? ['archer', 'spear', 'knight'] : ['spear', 'archer', 'knight'];
+    var done = false;
+    for (var i = 0; i < order.length; i++) {
+      var k = order[i];
+      if (U[k].gold <= budget && recruit(c, k, 1)) { budget -= U[k].gold; done = true; break; }
+    }
+    if (!done) break;
+  }
+}
+function aiMove(l) {
+  shuffle(counties(l)).forEach(function (c) {
+    if (c.owner !== l) return;
+    var m = movable(c); if (!total(m)) return;
+    var foes = enemyNb(c);
+    if (foes.length) {
+      if (state.turn < 4 || Math.random() < 0.2) return;
+      var need = 1.55 + Math.random() * 0.35, best = null, mode = null, bs = 0;
+      foes.forEach(function (n) {
+        var D = defence(n);
+        var s1 = atkOf(pick(m, 'strike')) / D, s2 = atkOf(pick(m, 'all')) / D;
+        if (s1 > need && s1 > bs) { bs = s1; best = n; mode = 'strike'; }
+        else if (s2 > need && s2 > bs) { bs = s2; best = n; mode = 'all'; }
+      });
+      if (best) doSend(c, best, mode);
+    } else {
+      var step = frontierStep(c, l);
+      if (step !== null) doSend(c, state.C[step], 'all');
+    }
+  });
+}
+function aiTurn(l) {
+  var L = state.lords[l], cs = counties(l); if (!cs.length) return;
+  var need = cs.reduce(function (a, c) { return a + eat(c); }, 0);
+  var secure = L.stock.grain / Math.max(1, need);
+  cs.forEach(function (c) { c.work.farm = Math.min(secure < 1.6 ? 55 : secure > 3.2 ? 35 : 45, farmLimit(c)); c.work.wood = 18; c.work.mine = c.i >= 0.6 ? 25 : c.i >= 0.3 ? 8 : 0; });
+  cs.forEach(function (c) { c.tax = c.mood < 25 ? 0 : c.mood < 42 ? 1 : c.mood > 75 ? 3 : 2; });
+  if (secure < 1.2 && L.stock.gold > 30) {
+    var buy = Math.min(Math.floor(L.stock.gold * 0.5 / 3), Math.ceil(need * 1.5 - L.stock.grain));
+    if (buy > 0) { L.stock.gold -= buy * 3; L.stock.grain += buy; }
+  }
+  aiRecruit(l);
+  aiMove(l);
+}
+
+/* ---------- Season tick ---------- */
+function economyTick() {
+  var s = season();
+  for (var l = 0; l < 4; l++) {
+    var L = state.lords[l]; if (!L.alive) continue;
+    var cs = counties(l), gr = 0, wd = 0, ir = 0, need = 0, gold = 0;
+    cs.forEach(function (c) { var p = prod(c, s); gr += p.grain; wd += p.wood; ir += p.iron; need += eat(c); gold += taxGold(c) + craft(c) - upkeep(c); });
+    var avail = L.stock.grain + gr, fed = avail >= need, ratio = need > 0 ? Math.min(1, avail / need) : 1;
+    L.stock.grain = fed ? avail - need : 0;
+    L.stock.wood += wd; L.stock.iron += ir; L.stock.gold += gold;
+    var unpaid = false; if (L.stock.gold < 0) { L.stock.gold = 0; unpaid = true; }
+    var t = TAX[L.tax];
+    cs.forEach(function (c) {
+      c.mood += TAX[c.tax].m + (fed ? 2 + RATION[c.ration === undefined ? 1 : c.ration].m : -15);
+      if (!fed) {
+        c.pop = Math.max(20, Math.round(c.pop * (1 - 0.12 * (1 - ratio) - 0.02)));
+        KINDS.forEach(function (k) { c.g[k] -= Math.round(c.g[k] * 0.1 * (1 - ratio)); });
+      }
+      /* Mood sets the pace: growth rises from nothing at 40 to full speed at 70 and 1.5x at 100; below 40 people drift away. */
+      c.pf = (c.pf || 0) + popRate(c, c.mood, fed);
+      var whole = c.pf >= 0 ? Math.floor(c.pf) : Math.ceil(c.pf);
+      c.pf -= whole; c.pop = Math.max(20, c.pop + whole);
+      if (c.mood < 20 && l === 0) logEv('Unrest in ' + c.name + ': people are leaving.', 'bad');
+      if (unpaid) KINDS.forEach(function (k) { c.g[k] -= Math.round(c.g[k] * 0.2); });
+      c.mood = clamp(c.mood, 0, 100); c.arr = zero(); c.mus = zero();
+    });
+    if (l === 0) {
+      if (!fed) logEv('Famine. The granaries are empty and the people go hungry.', 'bad');
+      if (unpaid) logEv('The treasury is empty. Unpaid soldiers desert.', 'bad');
+    }
+  }
+}
+function marketDrift() {
+  ['grain', 'wood', 'iron'].forEach(function (k) {
+    var m = state.market[k] * (1 + (Math.random() - 0.5) * 0.3);
+    state.market[k] = clamp(m + (1 - m) * 0.1, 0.6, 1.6);
+  });
+}
+function rollEvent() {
+  if (Math.random() > 0.25) return;
+  var mine = counties(0); if (!mine.length) return;
+  var c = mine[Math.floor(Math.random() * mine.length)], st = state.lords[0].stock, r = Math.random();
+  if (r < 0.25 && c.pop > 60) { var loss = Math.round(c.pop * 0.12); c.pop -= loss; logEv('Plague in ' + c.name + ': ' + loss + ' villagers died.', 'bad'); }
+  else if (r < 0.5) { var g = Math.round(30 + Math.random() * 40); st.grain += g; logEv('A bountiful yield in ' + c.name + ': +' + g + ' grain.', 'good'); }
+  else if (r < 0.75) { var m = Math.min(Math.round(st.gold * 0.12), 60); st.gold -= m; logEv('Bandits raid ' + c.name + ' and carry off ' + m + ' gold.', 'bad'); }
+  else { var t = Math.round(25 + Math.random() * 30); st.gold += t; logEv('A merchant caravan pays ' + t + ' gold in tolls at ' + c.name + '.', 'good'); }
+}
+function endSeason() {
+  if (state.over) return;
+  pending = [];
+  var before = Object.assign({}, state.lords[0].stock);
+  shuffle([1, 2, 3]).forEach(function (l) { if (state.lords[l].alive && !state.over) aiTurn(l); });
+  economyTick(); marketDrift(); rollEvent();
+  state.turn++;
+  checkElim();
+  var after = state.lords[0].stock;
+  logEv(SEASONS[season()] + ' ' + year() + ' begins. Gold ' + sgn(after.gold - before.gold) + ', grain ' + sgn(after.grain - before.grain) + '.');
+  var moved = seasonStart();
+  save(); render();
+  pending.forEach(function (rep) { battleSheet(rep); });
+  if (state.over) overSheet(); else if (!pending.length) toast(SEASONS[season()] + ' ' + year() + ' begins.' + (moved ? ' ' + moved + ' farmers moved to the crafts.' : ''));
+}
+function sgn(v) { v = Math.round(v); return (v >= 0 ? '+' : '') + v; }
+
+/* ---------- Sheets and toast ---------- */
+var sheetQ = [], sheetOpen = false, toastTimer = null;
+function sheet(title, html, btn, cb) { sheetQ.push({ title: title, html: html, btn: btn || 'Continue', cb: cb }); if (!sheetOpen) nextSheet(); }
+function nextSheet() {
+  var s = sheetQ.shift();
+  if (!s) { $('#sheetBg').hidden = true; sheetOpen = false; return; }
+  sheetOpen = true; current = s;
+  $('#sheet').innerHTML = '<h2 id="sheetTitle">' + s.title + '</h2>' + s.html + '<button class="btn primary" data-act="sheetok" id="sheetOk">' + s.btn + '</button>';
+  $('#sheetBg').hidden = false; $('#sheetOk').focus();
+}
+var current = null;
+function toast(t) {
+  var el = $('#toast'); el.textContent = t; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.hidden = true; }, 3200);
+}
+function battleSheet(rep) {
+  var you = rep.att === 0, title;
+  if (you) title = rep.won ? 'Victory at ' + rep.to : 'Repulsed at ' + rep.to;
+  else title = rep.won ? rep.to + ' has fallen' : rep.to + ' held';
+  var html = '<p class="big">Attack ' + rep.atk + ' against defence ' + rep.def + '</p>' +
+    '<p>' + (you ? 'You sent' : lordName(rep.att) + ' sent') + ' ' + fmtUnits(rep.sent) + ' from ' + rep.from + '.</p>' +
+    '<ul><li>' + (you ? 'Your losses' : 'Attacker losses') + ': ' + fmtUnits(rep.lostA) + '</li><li>' + (you ? 'Enemy losses' : 'Your losses') + ': ' + fmtUnits(rep.lostD) + '</li></ul>' +
+    '<p>' + (rep.won ? (you ? rep.to + ' is yours. Its people are uneasy and the garrison has just arrived.' : rep.to + ' now flies another banner.') : (you ? 'The survivors limp home.' : 'The attackers fall back.')) + '</p>';
+  sheet(title, html);
+}
+function overSheet() {
+  if (state.over === 'won') sheet('The crown is yours', '<p class="big">All twelve counties kneel to House Thorne.</p><p>You took the realm in ' + (state.turn) + ' seasons, ' + Math.floor(state.turn / 4) + ' years and ' + (state.turn % 4) + ' seasons.</p>', 'Begin a new reign', newGame);
+  else sheet('The house has fallen', '<p class="big">You hold no county.</p><p>The realm will remember House Thorne, though not kindly.</p>', 'Begin a new reign', newGame);
+}
+function helpSheet() {
+  sheet('Taking the crown',
+    '<ul><li>Tap a county. Set how many people farm, cut wood or mine. Farms pay off at harvest in autumn and give nothing in winter, so stockpile grain.</li>' +
+    '<li>Tax brings gold but unhappy people work less and leave. Watch the mood bar.</li>' +
+    '<li>Muster troops in the county panel. Spearmen defend, archers and knights attack. Troops that were mustered or moved this season march next season.</li>' +
+    '<li>Send troops from the Orders list. Tap Split to choose 10% to 100% of each troop type, then send them in one tap. Win battles to take counties. Hold all twelve to be crowned.</li>' +
+    '<li>The fields can only use so many farmers in each season. Extra farmers move to the crafts and earn gold. The numbers on your tiles are the share of people farming, cutting wood, mining and in crafts.</li></ul>', 'Begin');
+}
+function newGame() { state = newState(); state.help = true; save(); render(); helpSheet(); }
+
+/* ---------- Render ---------- */
+function moodWord(m) { return m >= 75 ? 'Loyal' : m >= 50 ? 'Content' : m >= 30 ? 'Uneasy' : m >= 15 ? 'Restless' : 'Rebellious'; }
+function moodCol(m) { return m >= 50 ? 'var(--good)' : m >= 30 ? 'var(--warn)' : 'var(--bad)'; }
+function pips(v) { var n = Math.round(v * 3); return n <= 0 ? '–' : '●'.repeat(Math.min(4, n)); }
+function oddsCls(a, d) { var r = a / d; return r >= 1.35 ? 'good' : r >= 1.05 ? 'fair' : 'risky'; }
+
+function renderHud() {
+  var s = season(), st = state.lords[0].stock, f = forecast(0);
+  $('#season').innerHTML = '<b>' + SEASONS[s] + '</b><span class="yr">' + year() + '</span><small>' + SEASON_NOTE[s] + '</small><div class="pips">' + [0, 1, 2, 3].map(function (i) { return '<i class="' + (i <= s ? 'on' : '') + '"></i>'; }).join('') + '</div>';
+  $('#res').innerHTML = ['gold', 'grain', 'wood', 'iron'].map(function (k) {
+    var d = Math.round(f[k]);
+    return '<div class="r r-' + k + '"><span class="lab">' + k + '</span><b>' + Math.floor(st[k]) + '</b><i class="' + (d >= 0 ? 'up' : 'dn') + '">' + (d >= 0 ? '+' : '') + d + '</i></div>';
+  }).join('');
+  var al = $('#alert');
+  if (st.grain + f.grain < 0) { al.hidden = false; al.textContent = 'Grain will run out before the season ends. Buy grain or move workers to the farms.'; }
+  else if (st.gold + f.gold < 0) { al.hidden = false; al.textContent = 'The treasury will run dry and soldiers will desert.'; }
+  else al.hidden = true;
+}
+function seenTroops(c) {
+  if (c.owner === 0) return String(troops(c));
+  if (bordersYou(c)) return '~' + round5(troops(c) * (1 + estNoise(c)));
+  return '?';
+}
+function renderMap() {
+  var sel = state.C[state.sel];
+  var tg = {};
+  if (sel && sel.owner === 0) NB[sel.id].forEach(function (n) { if (state.C[n].owner !== 0) tg[n] = 1; });
+  var h = '<defs>' +
+    '<symbol id="keep" viewBox="0 4 16 10"><path fill-rule="evenodd" d="M1 14V5h3v2h2V5h4v2h2V5h3v9zM7 14v-3a1 1 0 0 1 2 0v3z"/></symbol>' +
+    '<symbol id="ipop" viewBox="0 0 10 10"><circle cx="5" cy="3" r="2.2"/><path d="M1 10c0-3 2-4.5 4-4.5s4 1.5 4 4.5z"/></symbol>' +
+    '<symbol id="ishield" viewBox="0 0 10 10"><path d="M5 .5l4 1.3v3.2c0 2.3-1.6 3.9-4 4.8-2.4-.9-4-2.5-4-4.8V1.8z"/></symbol></defs>';
+  var order = state.C.slice().sort(function (a, b) { return (a.id === state.sel) - (b.id === state.sel); });
+  order.forEach(function (c) {
+    var p = center(c.id), cls = 'hex o' + c.owner + (c.id === state.sel ? ' sel' : '') + (tg[c.id] ? ' tgt' : '');
+    h += '<g class="' + cls + '" data-act="select" data-id="' + c.id + '" tabindex="0" role="button" aria-label="' + c.name + ', ' + state.lords[c.owner].name + '">' +
+      '<polygon points="' + hexPts(p.x, p.y, R - 2.5) + '"/>' +
+      '<use class="keep" href="#keep" x="' + (p.x - 8) + '" y="' + (p.y - 26) + '" width="16" height="10"/>' +
+      '<text x="' + p.x + '" y="' + (p.y + 3) + '">' + c.name + '</text>' +
+      '<use class="ico" href="#ipop" x="' + (p.x - 29) + '" y="' + (p.y + 10) + '" width="9" height="9"/>' +
+      '<text class="n" x="' + (p.x - 18) + '" y="' + (p.y + 18) + '">' + c.pop + '</text>' +
+      '<use class="ico" href="#ishield" x="' + (p.x + 3) + '" y="' + (p.y + 10) + '" width="9" height="9"/>' +
+      '<text class="n" x="' + (p.x + 14) + '" y="' + (p.y + 18) + '">' + seenTroops(c) + '</text>' +
+      (c.owner === 0 ? '<text class="jobs" x="' + p.x + '" y="' + (p.y + 29) + '"><tspan class="jf">' + c.work.farm + '</tspan><tspan class="jw" dx="4">' + c.work.wood + '</tspan><tspan class="ji" dx="4">' + c.work.mine + '</tspan><tspan class="jc" dx="4">' + idlePct(c) + '</tspan></text>' : '') + '</g>';
+  });
+  $('#map').innerHTML = h;
+  $('#legend').innerHTML = state.lords.map(function (L, i) {
+    var n = counties(i).length;
+    return '<span style="' + (L.alive ? '' : 'opacity:.4') + '"><i style="background:var(--' + LORD_COL[i] + ')"></i>' + L.short + ' ' + n + '</span>';
+  }).join('') + '<span class="jobkey">Jobs % on your tiles: <b style="color:var(--grain)">farm</b> <b style="color:var(--wood)">wood</b> <b style="color:var(--iron)">mine</b> <b style="color:var(--gold)">crafts</b></span>';
+}
+function renderTabs() {
+  document.querySelectorAll('#tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === state.tab ? 'true' : 'false'); });
+}
+function orderRows(c) {
+  var rows = [];
+  if (c.owner === 0) NB[c.id].forEach(function (n) { rows.push([c, state.C[n]]); });
+  else NB[c.id].forEach(function (n) { if (state.C[n].owner === 0) rows.push([state.C[n], c]); });
+  return rows;
+}
+function orderHtml(from, to) {
+  var m = movable(from), mine = to.owner === from.owner, tot = total(m);
+  var head, modes;
+  if (mine) {
+    head = '<div class="t"><b>Reinforce <button class="linkbtn" data-act="select" data-id="' + to.id + '">' + to.name + '</button></b><span>' + from.name + ' &rarr; ' + to.name + '</span></div>';
+    modes = [['all', 'All'], ['half', 'Half'], ['strike', 'Archers &amp; knights']];
+  } else {
+    var d = estDef(to);
+    head = '<div class="t"><b>Attack <button class="linkbtn" data-act="select" data-id="' + to.id + '">' + to.name + '</button></b><span>' + state.lords[to.owner].short + ' &middot; defence about ' + d + '</span></div>';
+    modes = [['all', 'All'], ['half', 'Half'], ['strike', 'Strike force']];
+  }
+  var btns = modes.map(function (md) {
+    var sent = pick(m, md[0]), a = atkOf(sent), n = total(sent);
+    var cls = mine ? '' : (n ? oddsCls(a, estDef(to)) : '');
+    var label = mine ? md[1] + ' (' + n + ')' : md[1] + ' &middot; ' + a;
+    return '<button class="btn sm ' + cls + '" data-act="send" data-from="' + from.id + '" data-to="' + to.id + '" data-mode="' + md[0] + '"' + (n ? '' : ' disabled') + '>' + label + '</button>';
+  }).join('');
+  var key = splitKey(from.id, to.id), open = state.split && state.split[key];
+  var toggle = '<button class="btn sm' + (open ? ' on' : '') + '" data-act="' + (open ? 'splitclose' : 'splitopen') + '" data-from="' + from.id + '" data-to="' + to.id + '" data-key="' + key + '"' + (tot ? '' : ' disabled') + '>' + (open ? 'Close split' : 'Split&hellip;') + '</button>';
+  return '<div class="order">' + head + '<div class="go">' + btns + toggle + '</div>' + splitHtml(from, to) + '</div>';
+}
+function splitKey(f, t) { return f + '-' + t; }
+function splitHtml(from, to) {
+  var key = splitKey(from.id, to.id), sp = state.split && state.split[key];
+  if (!sp) return '';
+  var m = movable(from), mine = to.owner === from.owner, sent = splitUnits(m, sp), n = total(sent), a = atkOf(sent);
+  var rows = KINDS.filter(function (k) { return m[k] > 0; }).map(function (k) {
+    return '<div class="row"><div class="grow"><b>' + U[k].n + '</b><small>' + m[k] + ' free &middot; sending ' + sent[k] + '</small></div>' +
+      '<div class="stepper"><button class="btn" data-act="splitpct" data-key="' + key + '" data-k="' + k + '" data-d="-10" aria-label="Send 10% fewer ' + U[k].n.toLowerCase() + '"' + (sp[k] <= 0 ? ' disabled' : '') + '>&minus;</button><output>' + sp[k] + '%</output>' +
+      '<button class="btn" data-act="splitpct" data-key="' + key + '" data-k="' + k + '" data-d="10" aria-label="Send 10% more ' + U[k].n.toLowerCase() + '"' + (sp[k] >= 100 ? ' disabled' : '') + '>+</button></div></div>';
+  }).join('');
+  var sets = [10, 25, 50, 75, 100].map(function (v) { return '<button class="btn sm" data-act="splitall" data-key="' + key + '" data-v="' + v + '">' + v + '%</button>'; }).join('');
+  var cls = mine ? 'primary' : (n ? oddsCls(a, estDef(to)) : '');
+  var label = n ? (mine ? 'Send ' + n + ' to ' + to.name : 'Attack ' + to.name + ' with ' + n + ' &middot; attack ' + a) : 'Choose troops to send';
+  return '<div class="split"><div class="chipset"><span class="note">All types:</span>' + sets + '</div>' + rows +
+    '<button class="btn ' + cls + '" data-act="sendsplit" data-from="' + from.id + '" data-to="' + to.id + '" data-key="' + key + '"' + (n ? '' : ' disabled') + '>' + label + '</button></div>';
+}
+function ownPanel(c) {
+  var s = season(), p = prod(c, s), st = state.lords[0].stock, lim = farmLimit(c);
+  var labels = { farm: 'Farmland', wood: 'Woodcutters', mine: 'Miners' };
+  var work = ['farm', 'wood', 'mine'].map(function (k) {
+    var n = Math.round(c.pop * c.work[k] / 100);
+    var out = k === 'farm' ? (s === 3 ? 'Nothing grows in winter' : '+' + Math.round(p.grain) + ' grain') + ' &middot; limit ' + lim + '%' : k === 'wood' ? '+' + Math.round(p.wood) + ' wood' : (c.i === 0 ? 'No ore here' : '+' + p.iron.toFixed(1) + ' iron');
+    var plusOff = idlePct(c) < 5 || (k === 'mine' && c.i === 0) || (k === 'farm' && c.work.farm + 5 > lim);
+    return '<div class="row"><div class="grow"><b>' + labels[k] + '</b><small>' + n + ' people &middot; ' + out + '</small></div>' +
+      '<div class="stepper"><button class="btn" data-act="work" data-k="' + k + '" data-d="-5" aria-label="Fewer ' + labels[k] + '"' + (c.work[k] < 5 ? ' disabled' : '') + '>&minus;</button><output>' + c.work[k] + '%</output>' +
+      '<button class="btn" data-act="work" data-k="' + k + '" data-d="5" aria-label="More ' + labels[k] + '"' + (plusOff ? ' disabled' : '') + '>+</button></div></div>';
+  }).join('');
+  var fortNext = FORT[c.fort];
+  var fortRow = fortNext ?
+    '<div class="row"><div class="grow"><b>Fortifications ' + c.fort + '/3</b><small>Defence &times;' + fortMult(c).toFixed(2) + '. Next: ' + fortNext.w + ' wood, ' + fortNext.i + ' iron, ' + fortNext.g + ' gold</small></div><button class="btn sm" data-act="fort"' + (st.wood >= fortNext.w && st.iron >= fortNext.i && st.gold >= fortNext.g ? '' : ' disabled') + '>Build</button></div>' :
+    '<div class="row"><div class="grow"><b>Fortifications 3/3</b><small>Defence &times;' + fortMult(c).toFixed(2) + '. Fully walled</small></div></div>';
+  var units = KINDS.map(function (k) {
+    var u = U[k], cost = u.gold + 'g' + (u.wood ? ' ' + u.wood + 'w' : '') + (u.iron ? ' ' + u.iron + 'i' : '');
+    var fresh = c.arr[k] > 0 ? ' (' + c.arr[k] + ' new)' : '';
+    return '<div class="row"><div class="grow"><b>' + u.n + ' ' + c.g[k] + '<span style="color:var(--muted);font-weight:400">' + fresh + '</span></b><small>Atk ' + u.atk + ' &middot; Def ' + u.def + ' &middot; ' + cost + ' &middot; ' + u.d + '</small></div>' +
+      '<button class="btn sm" data-act="muster" data-k="' + k + '" data-n="1"' + (canAfford(0, k, 1) && c.pop > 30 ? '' : ' disabled') + '>+1</button>' +
+      '<button class="btn sm" data-act="muster" data-k="' + k + '" data-n="5"' + (canAfford(0, k, 5) && c.pop > 35 ? '' : ' disabled') + '>+5</button>' +
+      '<button class="btn sm" data-act="undo" data-k="' + k + '" data-n="1" aria-label="Undo one ' + u.one + '" style="' + (c.mus && c.mus[k] > 0 ? '' : 'opacity:.38') + '">&minus;1</button></div>';
+  }).join('');
+  var orders = orderRows(c).map(function (r) { return orderHtml(r[0], r[1]); }).join('');
+  return '<article class="card">' +
+    '<div class="ch"><span class="dotc" style="background:var(--o0)"></span><h2>' + c.name + '</h2><span class="tag">Your county</span></div>' +
+    '<div class="stats"><div class="stat"><label>People</label><b>' + c.pop + '</b><small>of ' + Math.round(capOf(c)) + '</small>' + popNote(c) + '</div>' +
+    '<div class="stat"><label>Mood</label><b>' + moodWord(c.mood) + '</b><div class="bar"><i style="width:' + c.mood + '%;background:' + moodCol(c.mood) + '"></i></div>' + moodNote(c) + '</div>' +
+    '<div class="stat"><label>Defence</label><b>' + Math.round(defence(c)) + '</b><small>attack ' + atkOf(c.g) + '</small></div></div>' +
+    '<div class="chips"><span class="chip">Soil<b>' + pips(c.f) + '</b></span><span class="chip">Timber<b>' + pips(c.w) + '</b></span><span class="chip">Ore<b>' + pips(c.i) + '</b></span></div>' +
+    '<div><h3>Workers</h3><div class="rows">' + work +
+    '<div class="row"><div class="grow"><b>Townsfolk and crafts</b><small>' + idlePct(c) + '% &middot; +' + craft(c).toFixed(1) + ' gold</small></div></div>' +
+    '<p class="note">The fields can only use so many people in a season (' + SEASONS[s] + ': up to ' + lim + '% here, more on good soil). When a new season starts with more farmers than that, the extra people move to the crafts and earn gold. Your farming choice returns when the limit allows.</p></div></div>' +
+    '<div><h3>Tax</h3><div class="seg">' + TAX.map(function (t, i) { return '<button class="btn ' + (c.tax === i ? 'on' : '') + '" data-act="tax" data-v="' + i + '">' + t.n + '</button>'; }).join('') + '</div>' +
+    '<p class="note" style="margin-top:8px">' + TAX[c.tax].n + ' tax: about ' + Math.round(c.pop * TAX[c.tax].g) + ' gold a season, mood ' + (TAX[c.tax].m >= 0 ? '+' : '') + TAX[c.tax].m + ' a season (well-fed people recover 2 more).</p></div>' +
+    '<div><h3>Rations</h3><div class="seg" style="grid-template-columns:repeat(3,1fr)">' + RATION.map(function (r, i) { return '<button class="btn ' + ((c.ration === undefined ? 1 : c.ration) === i ? 'on' : '') + '" data-act="ration" data-v="' + i + '">' + r.n + '</button>'; }).join('') + '</div>' +
+    '<p class="note" style="margin-top:8px">' + RATION[c.ration === undefined ? 1 : c.ration].n + ' rations: this county eats ' + Math.round(eat(c)) + ' grain a season (people and soldiers), mood ' + (RATION[c.ration === undefined ? 1 : c.ration].m >= 0 ? '+' : '') + RATION[c.ration === undefined ? 1 : c.ration].m + ' a season while the realm is fed. Scant rations save grain but sour the mood.</p></div>' +
+    '<div><h3>Garrison</h3><div class="rows">' + units + fortRow + '</div></div>' +
+    '<div><h3>Orders</h3><div class="rows">' + orders + '<p class="note">Strike force sends archers and knights and leaves the spearmen at home. Button numbers are the attack you would bring. Colour shows how it compares with the scouts&rsquo; estimate of the defence.</p></div></div></article>';
+}
+function foePanel(c) {
+  var L = state.lords[c.owner], rows = orderRows(c);
+  var orders = rows.length ? rows.map(function (r) { return orderHtml(r[0], r[1]); }).join('') : '<p class="note">None of your counties border ' + c.name + '. Take a neighbouring county first.</p>';
+  var near = bordersYou(c);
+  return '<article class="card">' +
+    '<div class="ch"><span class="dotc" style="background:var(--' + LORD_COL[c.owner] + ')"></span><h2>' + c.name + '</h2><span class="tag">' + L.name + '</span></div>' +
+    '<div class="stats"><div class="stat"><label>People</label><b>' + c.pop + '</b></div>' +
+    '<div class="stat"><label>Defence</label><b>' + (near ? '~' + estDef(c) : '?') + '</b><small>' + (near ? 'scouted' : 'unknown') + '</small></div>' +
+    '<div class="stat"><label>Fort</label><b>' + c.fort + '</b><small>of 3</small></div></div>' +
+    '<div class="chips"><span class="chip">Soil<b>' + pips(c.f) + '</b></span><span class="chip">Timber<b>' + pips(c.w) + '</b></span><span class="chip">Ore<b>' + pips(c.i) + '</b></span></div>' +
+    '<div><h3>Orders</h3><div class="rows">' + orders + '</div></div></article>';
+}
+function realmPanel() {
+  var L = state.lords[0], s = season(), pop = counties(0).reduce(function (a, c) { return a + c.pop; }, 0);
+  var tax = TAX.map(function (t, i) { return '<button class="btn" data-act="taxall" data-v="' + i + '">' + t.n + '</button>'; }).join('');
+  var income = counties(0).reduce(function (a, c) { return a + taxGold(c); }, 0);
+  var mk = ['grain', 'wood', 'iron'].map(function (k) {
+    var pr = BASE[k] * state.market[k] * (k === 'grain' ? GRAIN_SEASON[s] : 1), buy = Math.ceil(pr * 1.15 * 10), sell = Math.floor(pr * 0.85 * 10);
+    return '<div class="row"><div class="grow"><b style="text-transform:capitalize">' + k + '</b><small>' + Math.floor(L.stock[k]) + ' in store &middot; 10 units</small></div>' +
+      '<button class="btn sm" data-act="buy" data-k="' + k + '"' + (L.stock.gold >= buy ? '' : ' disabled') + '>Buy ' + buy + 'g</button>' +
+      '<button class="btn sm" data-act="sell" data-k="' + k + '"' + (L.stock[k] >= 10 ? '' : ' disabled') + '>Sell ' + sell + 'g</button></div>';
+  }).join('');
+  var riv = [1, 2, 3].map(function (i) {
+    var R2 = state.lords[i], n = counties(i).length, b = counties(i).some(bordersYou);
+    return '<div class="row"><span class="dotc" style="background:var(--' + LORD_COL[i] + ')"></span><div class="grow"><b>' + R2.name + '</b><small>' + (R2.alive ? n + ' counties' + (b ? ' &middot; borders you' : '') : 'Defeated') + '</small></div></div>';
+  }).join('');
+  return '<article class="card">' +
+    '<div><h3>Armies</h3><div class="rows">' + counties(0).map(function (c) {
+      return '<div class="row"><div class="grow"><b><button class="linkbtn" data-act="select" data-id="' + c.id + '">' + c.name + '</button></b><small>' + fmtUnits(c.g) + ' &middot; attack ' + atkOf(c.g) + ', defence ' + Math.round(defence(c)) + '</small></div></div>';
+    }).join('') + '<p class="note">There is no single army. Each county keeps its own garrison, and you send troops between neighbouring counties from the Orders list.</p></div></div>' +
+    '<div><h3>Taxes</h3><p class="note" style="margin-bottom:8px">Tax is set in each county. Your counties bring in about ' + Math.round(income) + ' gold a season in all. To set the same rate everywhere:</p><div class="seg">' + tax + '</div></div>' +
+    '<div><h3>Market</h3><div class="rows">' + mk + '<p class="note">Grain is dearest in winter and cheapest at harvest. Merchants keep a margin on every trade.</p></div></div>' +
+    '<div><h3>Mood</h3><div class="rows">' + counties(0).map(function (c) {
+      return '<div class="row"><div class="grow"><b><button class="linkbtn" data-act="select" data-id="' + c.id + '">' + c.name + '</button></b><small>' + moodWord(c.mood) + ' (' + Math.round(c.mood) + ') &middot; ' + TAX[c.tax].n + ' tax, ' + RATION[c.ration === undefined ? 1 : c.ration].n.toLowerCase() + ' rations</small></div><div style="text-align:right">' + moodNote(c).replace('margin:4px 0 0;', 'margin:0;') + '</div></div>';
+    }).join('') + '<p class="note">Population follows mood. Growth starts above 40, reaches full speed at 70 and is 1.5 times faster at 100. Below 40 people slowly leave, and below 20 they leave quickly.</p></div></div>' +
+    '<div><h3>Rival lords</h3><div class="rows">' + riv + '</div></div>' +
+    '<div>' + (state.confirm ? '<p class="note" style="margin-bottom:8px">Abandon this reign and start again?</p><div class="seg" style="grid-template-columns:1fr 1fr"><button class="btn" data-act="newyes">Start over</button><button class="btn" data-act="newno">Keep playing</button></div>' : '<button class="btn" data-act="newask">Begin a new reign</button> <button class="btn" data-act="help">How to play</button>') + '</div></article>';
+}
+function chroniclePanel() {
+  return '<article class="card"><div class="log">' + state.log.slice().reverse().map(function (e) { return '<div><time>' + stamp(e.t) + '</time><span class="' + e.k + '">' + e.txt + '</span></div>'; }).join('') + '</div></article>';
+}
+function renderPanel() {
+  var h = state.tab === 'realm' ? realmPanel() : state.tab === 'chronicle' ? chroniclePanel() : (state.C[state.sel].owner === 0 ? ownPanel(state.C[state.sel]) : foePanel(state.C[state.sel]));
+  $('#panel').innerHTML = h;
+}
+function renderDock() {
+  var n = counties(0).length, s = season();
+  $('#dockInfo').innerHTML = '<b>' + n + ' of ' + NC + ' counties</b>' + (state.over ? 'The reign is over' : 'Next: ' + SEASONS[(s + 1) % 4]);
+  $('#endBtn').textContent = 'End ' + SEASONS[s].toLowerCase();
+  $('#endBtn').disabled = !!state.over;
+}
+function render() { renderHud(); renderMap(); renderTabs(); renderPanel(); renderDock(); }
+
+/* ---------- Actions ---------- */
+var ACT = {
+  select: function (d) { state.sel = +d.id; state.tab = 'county'; },
+  tab: function (d) { state.tab = d.tab; state.confirm = false; },
+  work: function (d) {
+    var c = state.C[state.sel], dl = +d.d, nx = c.work[d.k] + dl;
+    if (nx < 0 || (dl > 0 && idlePct(c) < dl) || (dl > 0 && d.k === 'mine' && c.i === 0)) return;
+    if (d.k === 'farm' && dl > 0 && nx > farmLimit(c)) return;
+    c.work[d.k] = nx;
+    if (d.k === 'farm') c.farmPref = nx;
+  },
+  muster: function (d) { var c = state.C[state.sel]; if (!recruit(c, d.k, +d.n)) toast('Cannot muster: check gold, wood, iron and the people left.'); },
+  undo: function (d) {
+    var c = state.C[state.sel];
+    if (!unmuster(c, d.k, +d.n)) toast('Nothing to undo. Only troops you mustered in this county this season can be taken back.');
+  },
+  fort: function () {
+    var c = state.C[state.sel], f = FORT[c.fort], st = state.lords[0].stock; if (!f) return;
+    if (st.wood < f.w || st.iron < f.i || st.gold < f.g) return;
+    st.wood -= f.w; st.iron -= f.i; st.gold -= f.g; c.fort++; logEv('Walls raised at ' + c.name + '.');
+  },
+  send: function (d) {
+    var from = state.C[+d.from], to = state.C[+d.to];
+    if (from.owner !== 0 || state.over) return;
+    var res = doSend(from, to, d.mode);
+    if (!res) return;
+    if (res.move) { toast('Marched ' + fmtUnits(res.m) + ' to ' + to.name + '.'); return; }
+    battleSheet(res);
+    if (state.over) overSheet();
+  },
+  splitopen: function (d) { state.split = state.split || {}; state.split[d.key] = { spear: 50, archer: 50, knight: 50 }; },
+  splitclose: function (d) { if (state.split) delete state.split[d.key]; },
+  splitpct: function (d) { var sp = state.split && state.split[d.key]; if (sp) sp[d.k] = clamp(sp[d.k] + (+d.d), 0, 100); },
+  splitall: function (d) { var sp = state.split && state.split[d.key]; if (sp) KINDS.forEach(function (k) { sp[k] = +d.v; }); },
+  sendsplit: function (d) {
+    var from = state.C[+d.from], to = state.C[+d.to], sp = state.split && state.split[d.key];
+    if (!sp || from.owner !== 0 || state.over) return;
+    var res = doSend(from, to, Object.assign({}, sp));
+    if (!res) return;
+    delete state.split[d.key];
+    if (res.move) { toast('Marched ' + fmtUnits(res.m) + ' to ' + to.name + '.'); return; }
+    battleSheet(res);
+    if (state.over) overSheet();
+  },
+  tax: function (d) { state.C[state.sel].tax = +d.v; },
+  ration: function (d) { state.C[state.sel].ration = +d.v; },
+  taxall: function (d) { counties(0).forEach(function (c) { c.tax = +d.v; }); },
+  buy: function (d) {
+    var st = state.lords[0].stock, s = season(), k = d.k, pr = BASE[k] * state.market[k] * (k === 'grain' ? GRAIN_SEASON[s] : 1), cost = Math.ceil(pr * 1.15 * 10);
+    if (st.gold < cost) return; st.gold -= cost; st[k] += 10;
+  },
+  sell: function (d) {
+    var st = state.lords[0].stock, s = season(), k = d.k, pr = BASE[k] * state.market[k] * (k === 'grain' ? GRAIN_SEASON[s] : 1), gain = Math.floor(pr * 0.85 * 10);
+    if (st[k] < 10) return; st[k] -= 10; st.gold += gain;
+  },
+  end: function () { endSeason(); return true; },
+  newask: function () { state.confirm = true; },
+  newno: function () { state.confirm = false; },
+  newyes: function () { state.confirm = false; newGame(); return true; },
+  help: function () { helpSheet(); },
+  sheetok: function () { var cb = current && current.cb; nextSheet(); if (cb) cb(); return true; }
+};
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  var f = ACT[b.dataset.act]; if (!f) return;
+  var handled = f(b.dataset);
+  if (!handled) { save(); render(); }
+});
+document.addEventListener('keydown', function (e) {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('g[data-act]')) { e.preventDefault(); ACT.select(e.target.dataset); save(); render(); }
+});
+
+/* ---------- Boot ---------- */
+state = load() || newState();
+state.C.forEach(function (c) { if (c.farmPref === undefined) c.farmPref = c.work.farm; });
+counties(0).forEach(applyFarmLimit);
+render();
+if (!state.help) { state.help = true; save(); helpSheet(); }
+if (state.over) overSheet();
+window.__fief = { get state() { return state; }, endSeason: endSeason, doSend: doSend, recruit: recruit, aiTurn: aiTurn, forecast: forecast };
+})();
+</script>
