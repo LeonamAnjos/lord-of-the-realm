@@ -20,5 +20,8 @@ Vite + Preact + TypeScript. The rules are a pure module in `src/game/` (no DOM, 
 2. Push to `main`. `.github/workflows/deploy.yml` checks types, runs the tests, builds and publishes.
 3. The site is served from `https://<user>.github.io/<repo-name>/`. The workflow sets the base path from the repository name, so a rename needs no code change. For a local build under another name, set `BASE_PATH=/name/`.
 
+## Protecting `main`
+Pull requests run `.github/workflows/ci.yml` (types, tests, build). In **Settings → Rules → Rulesets**, add a branch ruleset for `main` with: require a pull request before merging, require the status check `check` to pass, block force pushes, and restrict deletions.
+
 ## Saves
 The game saves itself in the browser after every move (`localStorage`, key `fief-and-crown-v1`). The Realm tab can export a save as text and import it on another device. Old `v: 1` saves are migrated when loaded.
