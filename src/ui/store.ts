@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import {
   SAVE_KEY, buildFort, buy, exportText, importText, clamp, createRng, endSeason, fmtUnits, newGame, parseSave, playerSend, recruit, sell, serialize,
-  setRation, setTax, setTaxAll, setWork, unmuster, KINDS, NB, movable, total, SEASONS, year, season,
+  setRation, setRationAll, setTax, setTaxAll, setWork, unmuster, KINDS, NB, movable, total, SEASONS, year, season,
   type GameState, type Kind, type Loaded, type Mode, type Rng, type Units, type Work,
 } from '../game';
 import { battleSheet, helpSheet, overSheet, type Sheet } from './sheets';
@@ -130,6 +130,15 @@ export const undo = (k: Kind, n: number): void => act(() => {
 export const fort = (): void => act(() => { buildFort(game.s, sel()); });
 export const tax = (v: number): void => act(() => { setTax(sel(), v); });
 export const ration = (v: number): void => act(() => { setRation(sel(), v); });
+export const rationAll = (v: number): void => act(() => { setRationAll(game.s, v); });
+/** Go to your next (1) or previous (-1) county, wrapping round. Does nothing unless a county of yours is selected. */
+export const stepCounty = (dir: 1 | -1): void => act(() => {
+  const mine = game.s.C.filter((c) => c.owner === 0);
+  const i = mine.findIndex((c) => c.id === game.ui.sel);
+  if (i < 0 || mine.length < 2) return;
+  game.ui.sel = mine[(i + dir + mine.length) % mine.length]!.id;
+  game.ui.tab = 'county'; game.ui.quick = null;
+});
 export const taxAll = (v: number): void => act(() => { setTaxAll(game.s, v); });
 export const buyLot = (k: 'grain' | 'wood' | 'iron'): void => act(() => { buy(game.s, k); });
 export const sellLot = (k: 'grain' | 'wood' | 'iron'): void => act(() => { sell(game.s, k); });

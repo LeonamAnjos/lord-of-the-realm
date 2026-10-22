@@ -26,3 +26,12 @@ describe('threats', () => {
     expect(threats(s).some((x) => x.from.id === 5)).toBe(false);
   });
 });
+
+describe('apply to all counties', () => {
+  it('sets rations in every county of yours and nobody else', async () => {
+    const { setRationAll } = await import('./actions');
+    const { s } = freshGame(1);
+    setRationAll(s, 2);
+    for (const c of s.C) expect(c.ration).toBe(c.owner === 0 ? 2 : 1);
+  });
+});

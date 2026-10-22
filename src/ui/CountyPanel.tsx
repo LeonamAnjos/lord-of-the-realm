@@ -1,11 +1,11 @@
 import {
-  FORT, KINDS, NEUTRAL, RATION, SEASONS, TAX, U, atkOf, bordersYou, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season,
+  FORT, KINDS, NEUTRAL, RATION, SEASONS, TAX, U, atkOf, bordersYou, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season, counties,
   type County, type GameState, type Work,
 } from '../game';
 import { MoodNote, ownerCol, PopNote, moodCol, moodWord, pips } from './format';
 import { CountyScene } from './scene';
 import { Order, orderRows } from './Orders';
-import { adjustWork, fort, game, muster, ration, setCtab, tax, undo, type CTab } from './store';
+import { adjustWork, fort, game, muster, ration, rationAll, setCtab, stepCounty, tax, taxAll, undo, type CTab } from './store';
 
 const LABELS: Record<keyof Work, string> = { farm: 'Farmland', wood: 'Woodcutters', mine: 'Miners' };
 
@@ -14,11 +14,19 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
   const fortNext = FORT[c.fort];
   const rows = orderRows(s, c);
   const taxT = TAX[c.tax]!, ratT = RATION[c.ration]!;
-  const ctab = game.ui.ctab;
+  const ctab = game.ui.ctab, many = counties(s, 0).length > 1;
   return (
     <>
       <div class="phead">
-        <div class="ch"><span class="dotc" style={{ background: 'var(--o0)' }} /><h2>{c.name}</h2><span class="tag">Your county</span></div>
+        <div class="ch">
+          <span class="dotc" style={{ background: 'var(--o0)' }} /><h2>{c.name}</h2>
+          {many ? (
+            <span class="stepc">
+              <button class="btn sm" aria-label="Previous county of yours" onClick={() => stepCounty(-1)}>‹</button>
+              <button class="btn sm" aria-label="Next county of yours" onClick={() => stepCounty(1)}>›</button>
+            </span>
+          ) : <span class="tag">Your county</span>}
+        </div>
         <div class="stats">
           <div class="stat"><label>People</label><b>{c.pop}</b><small>of {Math.round(capOf(c))}</small><PopNote s={s} c={c} /></div>
           <div class="stat">
@@ -76,6 +84,7 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
       <div>
         <h3>Tax</h3>
         <div class="seg">{TAX.map((t, i) => <button key={i} class={'btn ' + (c.tax === i ? 'on' : '')} onClick={() => tax(i)}>{t.n}</button>)}</div>
+        {many && <button class="btn sm all" onClick={() => taxAll(c.tax)}>Use {taxT.n.toLowerCase()} tax in all {counties(s, 0).length} counties</button>}
         <p class="note" style={{ marginTop: '8px' }}>
           {taxT.n} tax: about {Math.round(c.pop * taxT.g)} gold a season, mood {taxT.m >= 0 ? '+' : ''}{taxT.m} a season (well-fed people recover 2 more).
         </p>
@@ -85,6 +94,7 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
         <div class="seg" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
           {RATION.map((r, i) => <button key={i} class={'btn ' + (c.ration === i ? 'on' : '')} onClick={() => ration(i)}>{r.n}</button>)}
         </div>
+        {many && <button class="btn sm all" onClick={() => rationAll(c.ration)}>Use {ratT.n.toLowerCase()} rations in all {counties(s, 0).length} counties</button>}
         <p class="note" style={{ marginTop: '8px' }}>
           {ratT.n} rations: this county eats {Math.round(eat(c))} grain a season (people and soldiers), mood {ratT.m >= 0 ? '+' : ''}{ratT.m} a season while the realm is fed. Scant rations save grain but sour the mood.
         </p>

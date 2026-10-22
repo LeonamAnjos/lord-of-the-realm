@@ -274,3 +274,7 @@ button.warn { cursor: pointer; }
 .quick .qx { position: absolute; right: -4px; top: -6px; width: 36px; height: 36px; background: none; border: 0; font-size: 24px; color: var(--muted); cursor: pointer; }
 .quick .go { display: flex; gap: 6px; }
 .quick .go .btn { flex: 1; padding: 0 6px; }
+
+.stepc { margin-left: auto; display: flex; gap: 6px; }
+.stepc .btn { min-width: 44px; font-size: 20px; line-height: 1; }
+.btn.all { margin-top: 8px; width: 100%; }

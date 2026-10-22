@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { NC, SEASONS, counties, season, type GameState } from '../game';
-import { closeSheet, endTurn, game, setFull, setTab, type Tab } from './store';
+import { closeSheet, endTurn, game, setFull, setTab, stepCounty, type Tab } from './store';
 
 const TABS: [Tab, string][] = [['county', 'County'], ['realm', 'Realm'], ['chronicle', 'Chronicle']];
 
@@ -20,6 +20,18 @@ export function Panel({ children }: { children: ComponentChildren }) {
   const full = game.ui.full, y0 = useRef<number | null>(null), body = useRef<HTMLDivElement>(null);
   const { sel, tab, ctab } = game.ui;
   useEffect(() => { body.current?.querySelector('.pbody, .card')?.scrollTo?.(0, 0); }, [sel, tab, ctab, full]);
+  const t0 = useRef<[number, number] | null>(null);
+  const touchStart = (e: TouchEvent) => {
+    const t = e.touches[0]!;
+    t0.current = (e.target as HTMLElement).closest('.grab, .tabs, .subtabs, .warns, input') ? null : [t.clientX, t.clientY];
+  };
+  // a clear sideways swipe in the county panel goes to your next or previous county
+  const touchEnd = (e: TouchEvent) => {
+    const s0 = t0.current; t0.current = null;
+    if (!s0 || game.ui.tab !== 'county') return;
+    const t = e.changedTouches[0]!, dx = t.clientX - s0[0], dy = t.clientY - s0[1];
+    if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) stepCounty(dx < 0 ? 1 : -1);
+  };
   const down = (e: PointerEvent) => { y0.current = e.clientY; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); };
   const up = (e: PointerEvent) => {
     if (y0.current === null) return;
@@ -30,7 +42,7 @@ export function Panel({ children }: { children: ComponentChildren }) {
     else setFull(!full);
   };
   return (
-    <section class={'panel' + (full ? ' full' : '')} ref={body}>
+    <section class={'panel' + (full ? ' full' : '')} ref={body} onTouchStart={touchStart} onTouchEnd={touchEnd}>
       <button class="grab" aria-label={full ? 'Show the map' : 'Show more'} aria-expanded={full} onPointerDown={down} onPointerUp={up} onPointerCancel={() => { y0.current = null; }}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFull(!full); } }}>
         <i />
