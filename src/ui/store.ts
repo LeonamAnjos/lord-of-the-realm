@@ -29,6 +29,8 @@ export const game = {
   ui: { sel: 4, tab: 'county', help: false, confirm: false, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
   sheets: [] as Sheet[],
   toast: null as string | null,
+  /** the board fades out while a season ends, then back in with the new one */
+  fade: null as 'out' | 'in' | null,
 };
 
 /* ---------- change notification ---------- */
@@ -140,7 +142,7 @@ export const sendSplit = (key: string, fromId: number, toId: number): void => ac
   if (send(fromId, toId, { ...sp })) delete game.ui.split[key];
 });
 
-export const endTurn = (): void => act(() => {
+function runEndTurn(): void {
   const res = endSeason(game.s, game.rng);
   if (!res) return;
   for (const b of res.battles) pushSheet(battleSheet(game.s, b));
@@ -148,7 +150,20 @@ export const endTurn = (): void => act(() => {
   else if (!res.battles.length) {
     toast(`${SEASONS[season(game.s)]} ${year(game.s)} begins.${res.moved ? ` ${res.moved} farmers moved to the crafts.` : ''}`);
   }
-});
+}
+
+const FADE_OUT_MS = 280, FADE_IN_MS = 450;
+/** End the season: fade the board out, turn the season over while it is dark, fade it back in. */
+export const endTurn = (): void => {
+  if (game.fade) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { act(runEndTurn); return; }
+  game.fade = 'out';
+  emit();
+  setTimeout(() => {
+    act(() => { runEndTurn(); game.fade = 'in'; });
+    setTimeout(() => { game.fade = null; emit(); }, FADE_IN_MS);
+  }, FADE_OUT_MS);
+};
 
 export const askNew = (): void => act(() => { game.ui.confirm = true; });
 export const cancelNew = (): void => act(() => { game.ui.confirm = false; });

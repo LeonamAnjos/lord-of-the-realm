@@ -15,7 +15,7 @@ export function App() {
   const c = s.C[ui.sel]!;
   return (
     <>
-      <div class="shell">
+      <div class={g.fade ? 'shell fade-' + g.fade : 'shell'}>
         <Hud s={s} />
         <MapView s={s} sel={ui.sel} />
         <Tabs tab={ui.tab} />

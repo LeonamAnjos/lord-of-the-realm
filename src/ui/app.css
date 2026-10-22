@@ -213,3 +213,10 @@ svg.scene.se2 .s-tree path { fill: #b7742f; } svg.scene.se3 .s-tree path { fill:
 .waves path { fill: none; stroke: #24404a; stroke-width: 1; stroke-linecap: round; }
 .shallow { fill: #2a4b54; stroke: #2a4b54; stroke-width: 9; stroke-linejoin: round; }
 .land { fill: #34432f; }
+
+/* Ending a season: the board fades out, then in */
+@media (prefers-reduced-motion: no-preference) {
+  .shell.fade-out { opacity: 0; transition: opacity .28s ease-in; }
+  .shell.fade-in { animation: board-in .45s ease-out both; }
+}
+@keyframes board-in { from { opacity: 0; } }
