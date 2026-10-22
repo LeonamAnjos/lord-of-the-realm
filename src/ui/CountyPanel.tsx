@@ -3,6 +3,7 @@ import {
   type County, type GameState, type Work,
 } from '../game';
 import { LORD_COL, MoodNote, PopNote, moodCol, moodWord, pips } from './format';
+import { CountyScene } from './scene';
 import { Order, orderRows } from './Orders';
 import { adjustWork, fort, muster, ration, tax, undo } from './store';
 
@@ -16,6 +17,7 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
   return (
     <article class="card">
       <div class="ch"><span class="dotc" style={{ background: 'var(--o0)' }} /><h2>{c.name}</h2><span class="tag">Your county</span></div>
+      <CountyScene s={s} c={c} />
       <div class="stats">
         <div class="stat"><label>People</label><b>{c.pop}</b><small>of {Math.round(capOf(c))}</small><PopNote s={s} c={c} /></div>
         <div class="stat">

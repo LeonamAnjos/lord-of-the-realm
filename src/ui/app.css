@@ -157,3 +157,29 @@ h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .14em; text-transform: up
 /* Save and restore */
 .savetext { width: 100%; resize: vertical; background: var(--bg2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
 .savetext:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+/* County scene */
+.scene-wrap { display: flex; flex-direction: column; gap: 6px; }
+svg.scene { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--line); --sky: #26382f; --gr: #2e4a33; --fa: #6b8a3e; --far: #223a2c; }
+svg.scene.se1 { --sky: #2b4636; --gr: #35553a; --fa: #9bb04a; --far: #284232; }
+svg.scene.se2 { --sky: #4a3a2a; --gr: #5a4a2a; --fa: #d1a93a; --far: #3f3224; }
+svg.scene.se3 { --sky: #323c46; --gr: #aeb7bb; --fa: #8f9690; --far: #6f7b85; }
+.scene .sky { fill: var(--sky); } .scene .ground { fill: var(--gr); } .scene .far { fill: var(--far); }
+.scene .hill { fill: var(--far); } .scene .hill.rock { fill: #5b6672; }
+.scene .field { fill: var(--fa); opacity: .9; }
+.scene .mine-door { fill: #14181b; }
+.scene .s-keep rect, .scene .s-keep path { fill: var(--o0); } .scene .s-keep .door { fill: var(--o0d); } .scene .s-keep .wallb { fill: var(--o0d); }
+.scene .s-house rect { fill: #8c7a63; } .scene .s-house .roof { fill: var(--o0d); } .scene .s-house .door { fill: #3b3329; }
+.scene .smithy rect { fill: #5d5a56; } .scene .smithy .chim { fill: #44423f; }
+.scene .smoke { fill: #cfd3d6; opacity: .45; animation: smoke 3s ease-out infinite; transform-box: fill-box; }
+@keyframes smoke { from { transform: translateY(0); opacity: .5; } to { transform: translateY(-12px); opacity: 0; } }
+.scene .s-tree path { fill: #3f7a4c; } .scene .s-tree .trunk { fill: #5b4332; }
+svg.scene.se2 .s-tree path { fill: #b7742f; } svg.scene.se3 .s-tree path { fill: #dfe6e8; }
+.scene .fig circle { fill: #e8d2b4; }
+.scene .fm path, .scene .fm circle:first-child { }
+.scene .ff path { fill: var(--grain); } .scene .fw path { fill: var(--wood); } .scene .fm path { fill: var(--iron); } .scene .fc path { fill: var(--gold); } .scene .fs path { fill: var(--o0); }
+.scene .sold rect { fill: #c9c2b0; }
+.scene-note { fill: var(--dim); font: 500 8px var(--body); }
+.scene-cap b { font-weight: 700; }
+.scene-cap .ff { color: var(--grain); } .scene-cap .fw { color: var(--wood); } .scene-cap .fm { color: var(--iron); } .scene-cap .fc { color: var(--gold); } .scene-cap .fs { color: var(--o0); }
+@media (prefers-reduced-motion: reduce) { .scene .smoke { animation: none; } }
