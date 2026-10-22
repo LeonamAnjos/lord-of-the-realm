@@ -66,10 +66,10 @@ svg#map { width: 100%; height: auto; display: block; }
 .hex.o1 { --oc: var(--o1); --od: var(--o1d); }
 .hex.o2 { --oc: var(--o2); --od: var(--o2d); }
 .hex.o3 { --oc: var(--o3); --od: var(--o3d); }
-.hex polygon { fill: var(--od); stroke: var(--oc); stroke-width: 1.5; }
-.hex.sel polygon { stroke: var(--fg); stroke-width: 3; }
-.hex.tgt polygon { stroke: var(--fg); stroke-width: 2; stroke-dasharray: 5 3; }
-.hex:focus-visible polygon { stroke: var(--fg); stroke-width: 3; }
+.hex .shape { fill: var(--od); stroke: var(--oc); stroke-width: 1.5; }
+.hex.sel .shape { stroke: var(--fg); stroke-width: 3; }
+.hex.tgt .shape { stroke: var(--fg); stroke-width: 2; stroke-dasharray: 5 3; }
+.hex:focus-visible .shape { stroke: var(--fg); stroke-width: 3; }
 .hex .keep, .hex .ico { fill: var(--oc); }
 .hex text { fill: var(--fg); font: 700 10.5px var(--body); text-anchor: middle; pointer-events: none; }
 .hex text.n { font-weight: 500; font-size: 10px; text-anchor: start; }
@@ -207,3 +207,9 @@ svg.scene.se2 .s-tree path { fill: #b7742f; } svg.scene.se3 .s-tree path { fill:
 @keyframes clash { 0% { opacity: 0; transform: scale(.3); } 40% { opacity: 1; transform: scale(1.3); } 100% { opacity: 0; transform: scale(1.6); } }
 @keyframes flag-out { to { opacity: 0; } }
 @keyframes flag-up { from { opacity: 0; transform: translateY(14px); } }
+
+/* Sea and land behind the counties */
+.sea { fill: #14232a; }
+.waves path { fill: none; stroke: #24404a; stroke-width: 1; stroke-linecap: round; }
+.shallow { fill: #2a4b54; stroke: #2a4b54; stroke-width: 9; stroke-linejoin: round; }
+.land { fill: #34432f; }
