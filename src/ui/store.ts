@@ -34,7 +34,17 @@ export interface Ui {
   saveBox: { mode: 'closed' | 'export' | 'import'; text: string; error: string | null; pending: Loaded | null };
 }
 
+const FOLD_KEY = 'fief-and-crown-folds';
+/** Which panel sections the player folded (true) or opened (false), kept apart from the save so a new reign keeps your layout. */
+function loadFolds(): Record<string, boolean> {
+  try {
+    const v = JSON.parse(localStorage.getItem(FOLD_KEY) ?? '{}');
+    return v && typeof v === 'object' ? v : {};
+  } catch { return {}; }
+}
+
 export const game = {
+  fold: loadFolds(),
   s: undefined as unknown as GameState,
   rng: undefined as unknown as Rng,
   ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, ctab: 'work', full: false, quick: null, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
@@ -115,6 +125,11 @@ export const tapCounty = (id: number): void => {
   else select(id);
 };
 export const closeQuick = (): void => act(() => { game.ui.quick = null; });
+export const toggleFold = (id: string, shut: boolean): void => {
+  game.fold[id] = shut;
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify(game.fold)); } catch { /* play on */ }
+  emit();
+};
 export const setCtab = (t: CTab): void => act(() => { game.ui.ctab = t; });
 export const setFull = (v: boolean): void => act(() => { game.ui.full = v; });
 export const setTab = (tab: Tab): void => act(() => { game.ui.tab = tab; game.ui.confirm = false; });

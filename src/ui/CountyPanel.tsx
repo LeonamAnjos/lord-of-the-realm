@@ -4,6 +4,7 @@ import {
 } from '../game';
 import { MoodNote, ownerCol, PopNote, moodCol, moodWord, pips } from './format';
 import { CountyScene } from './scene';
+import { Section } from './Section';
 import { Order, orderRows } from './Orders';
 import { adjustWork, fort, game, muster, ration, rationAll, setCtab, stepCounty, tax, taxAll, undo, type CTab } from './store';
 
@@ -50,8 +51,7 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
               <span class="chip">Timber<b>{pips(c.w)}</b></span>
               <span class="chip">Ore<b>{pips(c.i)}</b></span>
             </div>
-      <div>
-        <h3>Workers</h3>
+      <Section id="workers" title="Workers">
         <div class="rows">
           {(['farm', 'wood', 'mine'] as const).map((k) => {
             const n = Math.round((c.pop * c.work[k]) / 100);
@@ -76,21 +76,19 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
             The fields can only use so many people in a season ({SEASONS[se]}: up to {lim}% here, more on good soil). When a new season starts with more farmers than that, the extra people move to the crafts and earn gold. Your farming choice returns when the limit allows.
           </p>
         </div>
-      </div>
+      </Section>
           </>
         )}
         {ctab === 'policy' && (
           <>
-      <div>
-        <h3>Tax</h3>
+      <Section id="tax" title="Tax">
         <div class="seg">{TAX.map((t, i) => <button key={i} class={'btn ' + (c.tax === i ? 'on' : '')} onClick={() => tax(i)}>{t.n}</button>)}</div>
         {many && <button class="btn sm all" onClick={() => taxAll(c.tax)}>Use {taxT.n.toLowerCase()} tax in all {counties(s, 0).length} counties</button>}
         <p class="note" style={{ marginTop: '8px' }}>
           {taxT.n} tax: about {Math.round(c.pop * taxT.g)} gold a season, mood {taxT.m >= 0 ? '+' : ''}{taxT.m} a season (well-fed people recover 2 more).
         </p>
-      </div>
-      <div>
-        <h3>Rations</h3>
+      </Section>
+      <Section id="rations" title="Rations">
         <div class="seg" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
           {RATION.map((r, i) => <button key={i} class={'btn ' + (c.ration === i ? 'on' : '')} onClick={() => ration(i)}>{r.n}</button>)}
         </div>
@@ -98,13 +96,12 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
         <p class="note" style={{ marginTop: '8px' }}>
           {ratT.n} rations: this county eats {Math.round(eat(c))} grain a season (people and soldiers), mood {ratT.m >= 0 ? '+' : ''}{ratT.m} a season while the realm is fed. Scant rations save grain but sour the mood.
         </p>
-      </div>
+      </Section>
           </>
         )}
         {ctab === 'troops' && (
           <>
-      <div>
-        <h3>Garrison</h3>
+      <Section id="garrison" title="Garrison">
         <div class="rows">
           {KINDS.map((k) => {
             const u = U[k];
@@ -130,7 +127,7 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
             <div class="row"><div class="grow"><b>Fortifications 3/3</b><small>Defence ×{fortMult(c).toFixed(2)}. Fully walled</small></div></div>
           )}
         </div>
-      </div>
+      </Section>
           </>
         )}
         {ctab === 'orders' && (
