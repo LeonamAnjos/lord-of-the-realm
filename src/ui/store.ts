@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import {
   SAVE_KEY, buildFort, buy, exportText, importText, clamp, createRng, endSeason, fmtUnits, newGame, parseSave, playerSend, recruit, sell, serialize,
-  setRation, setTax, setTaxAll, setWork, unmuster, KINDS, SEASONS, year, season,
+  setRation, setTax, setTaxAll, setWork, unmuster, KINDS, NB, movable, total, SEASONS, year, season,
   type GameState, type Kind, type Loaded, type Mode, type Rng, type Units, type Work,
 } from '../game';
 import { battleSheet, helpSheet, overSheet, type Sheet } from './sheets';
@@ -20,6 +20,8 @@ export interface Ui {
   confirm: boolean;
   /** which part of your county the panel shows */
   ctab: CTab;
+  /** the quick attack popup on the map: from your county to a neighbour */
+  quick: { from: number; to: number } | null;
   /** the panel is pulled up over the map */
   full: boolean;
   /** counties that start with no lord in the next reign */
@@ -35,7 +37,7 @@ export interface Ui {
 export const game = {
   s: undefined as unknown as GameState,
   rng: undefined as unknown as Rng,
-  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, ctab: 'work', full: false, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
+  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, ctab: 'work', full: false, quick: null, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
   sheets: [] as Sheet[],
   toast: null as string | null,
   /** the board fades out while a season ends, then back in with the new one */
@@ -68,6 +70,7 @@ const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0]!;
 function begin(seed: number): void {
   game.rng = createRng(seed);
   game.s = newGame(game.rng, seed, { unclaimed: game.ui.wild, oneEach: game.ui.oneEach });
+  game.ui.quick = null;
 }
 
 /* ---------- sheets and toast ---------- */
@@ -90,7 +93,7 @@ export function boot(): void {
   let loaded: ReturnType<typeof parseSave> = null;
   try { loaded = parseSave(localStorage.getItem(SAVE_KEY)); } catch { /* no storage */ }
   if (loaded) {
-    game.s = loaded.state; game.rng = loaded.rng;
+    game.s = loaded.state; game.rng = loaded.rng; game.ui.quick = null;
     const u = loaded.ui;
     game.ui.sel = typeof u.sel === 'number' ? u.sel : 4;
     game.ui.tab = u.tab === 'realm' || u.tab === 'chronicle' ? u.tab : 'county';
@@ -104,7 +107,14 @@ export function boot(): void {
 }
 
 /* ---------- actions ---------- */
-export const select = (id: number): void => act(() => { game.ui.sel = id; game.ui.tab = 'county'; });
+export const select = (id: number): void => act(() => { game.ui.sel = id; game.ui.tab = 'county'; game.ui.quick = null; });
+/** Tap a county on the map: a neighbour you could march on opens the quick attack popup, anything else is selected. */
+export const tapCounty = (id: number): void => {
+  const from = game.s.C[game.ui.sel], to = game.s.C[id];
+  if (from && to && from.owner === 0 && to.owner !== 0 && NB[from.id]!.includes(id) && total(movable(from)) > 0 && !game.s.over) act(() => { game.ui.quick = { from: from.id, to: id }; });
+  else select(id);
+};
+export const closeQuick = (): void => act(() => { game.ui.quick = null; });
 export const setCtab = (t: CTab): void => act(() => { game.ui.ctab = t; });
 export const setFull = (v: boolean): void => act(() => { game.ui.full = v; });
 export const setTab = (tab: Tab): void => act(() => { game.ui.tab = tab; game.ui.confirm = false; });
@@ -134,7 +144,7 @@ function send(fromId: number, toId: number, mode: Mode): boolean {
   }
   return true;
 }
-export const sendOrder = (fromId: number, toId: number, mode: 'all' | 'half' | 'strike'): void => act(() => { send(fromId, toId, mode); });
+export const sendOrder = (fromId: number, toId: number, mode: 'all' | 'half' | 'strike'): void => act(() => { game.ui.quick = null; send(fromId, toId, mode); });
 
 export const splitKey = (f: number, t: number): string => f + '-' + t;
 export const splitOpen = (key: string): void => act(() => { game.ui.split[key] = { spear: 50, archer: 50, knight: 50 }; });
@@ -154,6 +164,7 @@ export const sendSplit = (key: string, fromId: number, toId: number): void => ac
 });
 
 function runEndTurn(): void {
+  game.ui.quick = null;
   const res = endSeason(game.s, game.rng);
   if (!res) return;
   for (const b of res.battles) pushSheet(battleSheet(game.s, b));

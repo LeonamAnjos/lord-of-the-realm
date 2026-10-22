@@ -1,7 +1,8 @@
 import { NB, NEUTRAL, counties, idlePct, seenTroops, type GameState } from '../game';
 import { LORD_COL } from './format';
 import { COUNTY_PATH, ISLANDS, LAND_PATH, WAVES, center } from './hex';
-import { select } from './store';
+import { Quick } from './Quick';
+import { tapCounty } from './store';
 import { Figures, Fort, GarrisonDefs } from './garrison';
 import { Buildings, RoadStub, Terrain, TerrainDefs } from './terrain';
 
@@ -13,6 +14,7 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
   const order = s.C.slice().sort((a, b) => Number(a.id === sel) - Number(b.id === sel));
   return (
     <section class="map-wrap">
+      <Quick s={s} />
       <svg id="map" viewBox="-18 -14 436 292" role="group" aria-label="Map of twelve counties">
         <defs>
           <symbol id="keep" viewBox="0 4 16 10"><path fill-rule="evenodd" d="M1 14V5h3v2h2V5h4v2h2V5h3v9zM7 14v-3a1 1 0 0 1 2 0v3z" /></symbol>
@@ -35,8 +37,8 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
           return (
             <g
               key={c.id} class={cls} tabIndex={0} role="button" aria-label={`${c.name}, ${c.owner === NEUTRAL ? 'no lord' : s.lords[c.owner]!.name}`}
-              onClick={() => select(c.id)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(c.id); } }}
+              onClick={() => tapCounty(c.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapCounty(c.id); } }}
             >
               <path class="shape" d={COUNTY_PATH[c.id]} />
               {c.owner === 0 ? <Buildings c={c} x={p.x} y={p.y} /> : <Terrain c={c} x={p.x} y={p.y} />}

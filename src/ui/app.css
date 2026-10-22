@@ -60,7 +60,6 @@ h1 { margin: 0; font: 400 22px/1 var(--display); letter-spacing: .05em; }
 .r i { font-style: normal; font-size: 12px; margin-left: 4px; }
 .r-gold .lab { color: var(--gold); } .r-grain .lab { color: var(--grain); } .r-wood .lab { color: var(--wood); } .r-iron .lab { color: var(--iron); }
 .up { color: var(--good); } .dn { color: var(--bad); }
-.alert { font-size: 13px; color: var(--warn); }
 
 /* Map */
 .map-wrap { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 4px 4px 8px; }
@@ -259,3 +258,19 @@ h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0
 .phead { gap: 6px; padding-bottom: 6px; }
 .phead .stat small { font-size: 12px; }
 .jobkey b { font-weight: 700; margin-left: 4px; }
+
+/* Warnings in the top bar */
+.warns { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.warns::-webkit-scrollbar { display: none; }
+.warn { flex: none; font: inherit; font-size: 12.5px; color: var(--bad); background: rgba(234, 112, 96, .12); border: 1px solid var(--bad); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+button.warn { cursor: pointer; }
+
+/* Quick attack popup over the map */
+.map-wrap { position: relative; }
+.quick { position: absolute; left: 8px; right: 8px; z-index: 4; background: var(--panel2); border: 1px solid var(--muted); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, .5); }
+.quick.top { top: 8px; } .quick.bottom { bottom: 8px; }
+.quick .qt { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding-right: 30px; position: relative; }
+.quick .qt span { color: var(--muted); font-size: 13px; }
+.quick .qx { position: absolute; right: -4px; top: -6px; width: 36px; height: 36px; background: none; border: 0; font-size: 24px; color: var(--muted); cursor: pointer; }
+.quick .go { display: flex; gap: 6px; }
+.quick .go .btn { flex: 1; padding: 0 6px; }

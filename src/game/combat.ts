@@ -125,6 +125,24 @@ export const round5 = (v: number): number => Math.max(5, Math.round(v / 5) * 5);
 export const estDef = (s: GameState, c: County): number => round5(defence(c) * (1 + estNoise(s, c)));
 export const bordersYou = (s: GameState, c: County): boolean => NB[c.id]!.some((n) => s.C[n]!.owner === 0);
 
+/** A rival army that looks strong enough to take one of your counties. `ratio` is its scouted attack over that county's defence. */
+export interface Threat { from: County; to: County; ratio: number }
+
+/** Rival counties touching yours whose scouted army (off by up to 15%, as with scouting) could break the county it borders, strongest first. */
+export function threats(s: GameState, min = 1.2): Threat[] {
+  const best = new Map<number, Threat>();
+  for (const to of counties(s, 0)) {
+    const def = defence(to);
+    for (const n of NB[to.id]!) {
+      const from = s.C[n]!;
+      if (from.owner <= 0) continue;
+      const ratio = (atkOf(from.g) * (1 + estNoise(s, from))) / def;
+      if (ratio >= min && ratio > (best.get(to.id)?.ratio ?? 0)) best.set(to.id, { from, to, ratio });
+    }
+  }
+  return [...best.values()].sort((a, b) => b.ratio - a.ratio);
+}
+
 /** What you can see of a county's garrison: exact if yours, approximate (~) at the border, "?" elsewhere. */
 export function seenTroops(s: GameState, c: County): string {
   if (c.owner === 0) return String(troops(c));
