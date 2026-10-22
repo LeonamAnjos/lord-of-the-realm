@@ -17,6 +17,10 @@ export interface Ui {
   help: boolean;
   /** "start over?" question is open */
   confirm: boolean;
+  /** counties that start with no lord in the next reign */
+  wild: number;
+  /** the next reign starts with one random county for every lord */
+  oneEach: boolean;
   /** open split dialogs, by "from-to" */
   split: Record<string, Units>;
   /** the save box in the Realm tab */
@@ -26,7 +30,7 @@ export interface Ui {
 export const game = {
   s: undefined as unknown as GameState,
   rng: undefined as unknown as Rng,
-  ui: { sel: 4, tab: 'county', help: false, confirm: false, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
+  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
   sheets: [] as Sheet[],
   toast: null as string | null,
   /** the board fades out while a season ends, then back in with the new one */
@@ -58,7 +62,7 @@ const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0]!;
 
 function begin(seed: number): void {
   game.rng = createRng(seed);
-  game.s = newGame(game.rng, seed);
+  game.s = newGame(game.rng, seed, { unclaimed: game.ui.wild, oneEach: game.ui.oneEach });
 }
 
 /* ---------- sheets and toast ---------- */
@@ -166,11 +170,13 @@ export const endTurn = (): void => {
 };
 
 export const askNew = (): void => act(() => { game.ui.confirm = true; });
+export const setOneEach = (v: boolean): void => act(() => { game.ui.oneEach = v; });
+export const setWild = (n: number): void => act(() => { game.ui.wild = n; });
 export const cancelNew = (): void => act(() => { game.ui.confirm = false; });
 export function startNewGame(): void {
   act(() => {
     begin(randomSeed());
-    game.ui.sel = 4; game.ui.tab = 'county'; game.ui.confirm = false; game.ui.split = {}; game.ui.help = true;
+    game.ui.sel = game.s.C.find((c) => c.owner === 0)!.id; game.ui.tab = 'county'; game.ui.confirm = false; game.ui.split = {}; game.ui.help = true;
     game.sheets = [];
     pushSheet(helpSheet());
   });

@@ -1,4 +1,4 @@
-import { KINDS, NB, NC, NORMAL_RATION, NORMAL_TAX, U } from './data';
+import { KINDS, NB, NC, NEUTRAL, NORMAL_RATION, NORMAL_TAX, U } from './data';
 import { applyFarmLimit } from './economy';
 import { range, type Rng } from './rng';
 import { atkOf, clamp, counties, defaultWork, defence, logEv, lordName, movable, total, troops, zero } from './state';
@@ -67,6 +67,10 @@ export function battle(s: GameState, rng: Rng, from: County, to: County, m: Unit
 
 export function battleLog(s: GameState, rep: BattleReport): string {
   const a = lordName(s, rep.att), d = lordName(s, rep.dfn);
+  if (rep.dfn === NEUTRAL) {
+    if (rep.att === 0) return rep.won ? `You claimed ${rep.to}, which had no lord.` : `Your attack on ${rep.to} failed.`;
+    return rep.won ? `${a} claimed ${rep.to}, which had no lord.` : `${rep.to} held out against ${a}.`;
+  }
   if (rep.att === 0) return rep.won ? `You took ${rep.to} from ${d}.` : `Your attack on ${rep.to} failed.`;
   if (rep.dfn === 0) return rep.won ? `${a} took ${rep.to} from you.` : `You held ${rep.to} against ${a}.`;
   return rep.won ? `${a} took ${rep.to} from ${d}.` : `${d} held ${rep.to} against ${a}.`;

@@ -6,6 +6,8 @@ export const pips = (v: number): string => { const n = Math.round(v * 3); return
 export const oddsCls = (a: number, d: number): string => { const r = a / d; return r >= 1.35 ? 'good' : r >= 1.05 ? 'fair' : 'risky'; };
 export const signed = (v: number): string => (v >= 0 ? '+' : '') + v;
 export const LORD_COL = ['o0', 'o1', 'o2', 'o3'];
+/** Colour variable for a county's owner; -1 (no lord) is grey. */
+export const ownerCol = (owner: number): string => `o${owner}`;
 
 const note = (color: string, margin = '4px 0 0') => ({ display: 'block', margin, color });
 

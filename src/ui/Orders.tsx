@@ -1,4 +1,4 @@
-import { KINDS, NB, U, atkOf, estDef, movable, pick, splitUnits, total, type County, type GameState } from '../game';
+import { KINDS, NB, NEUTRAL, U, atkOf, estDef, movable, pick, splitUnits, total, type County, type GameState } from '../game';
 import { oddsCls } from './format';
 import { game, select, sendOrder, sendSplit, splitAll, splitClose, splitKey, splitOpen, splitPct } from './store';
 
@@ -21,7 +21,7 @@ export function Order({ s, from, to }: { s: GameState; from: County; to: County 
       {mine ? (
         <div class="t"><b>Reinforce <button class="linkbtn" onClick={() => select(to.id)}>{to.name}</button></b><span>{from.name} → {to.name}</span></div>
       ) : (
-        <div class="t"><b>Attack <button class="linkbtn" onClick={() => select(to.id)}>{to.name}</button></b><span>{s.lords[to.owner]!.short} · defence about {estDef(s, to)}</span></div>
+        <div class="t"><b>{to.owner === NEUTRAL ? 'Claim' : 'Attack'} <button class="linkbtn" onClick={() => select(to.id)}>{to.name}</button></b><span>{to.owner === NEUTRAL ? 'No lord' : s.lords[to.owner]!.short} · defence about {estDef(s, to)}</span></div>
       )}
       <div class="go">
         {modes.map(([mode, label]) => {
@@ -47,7 +47,7 @@ function Split({ s, from, to }: { s: GameState; from: County; to: County }) {
   const m = movable(from), mine = to.owner === from.owner;
   const sent = splitUnits(m, sp), n = total(sent), a = atkOf(sent);
   const cls = mine ? 'primary' : n ? oddsCls(a, estDef(s, to)) : '';
-  const label = n ? (mine ? `Send ${n} to ${to.name}` : `Attack ${to.name} with ${n} · attack ${a}`) : 'Choose troops to send';
+  const label = n ? (mine ? `Send ${n} to ${to.name}` : `${to.owner === NEUTRAL ? 'Claim' : 'Attack'} ${to.name} with ${n} · attack ${a}`) : 'Choose troops to send';
   return (
     <div class="split">
       <div class="chipset">

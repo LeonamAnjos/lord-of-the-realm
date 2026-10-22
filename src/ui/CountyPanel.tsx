@@ -1,8 +1,8 @@
 import {
-  FORT, KINDS, RATION, SEASONS, TAX, U, atkOf, bordersYou, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season,
+  FORT, KINDS, NEUTRAL, RATION, SEASONS, TAX, U, atkOf, bordersYou, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season,
   type County, type GameState, type Work,
 } from '../game';
-import { LORD_COL, MoodNote, PopNote, moodCol, moodWord, pips } from './format';
+import { MoodNote, ownerCol, PopNote, moodCol, moodWord, pips } from './format';
 import { CountyScene } from './scene';
 import { Order, orderRows } from './Orders';
 import { adjustWork, fort, muster, ration, tax, undo } from './store';
@@ -120,10 +120,10 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
 }
 
 export function FoeCounty({ s, c }: { s: GameState; c: County }) {
-  const L = s.lords[c.owner]!, rows = orderRows(s, c), near = bordersYou(s, c);
+  const lord = c.owner === NEUTRAL ? 'No lord' : s.lords[c.owner]!.name, rows = orderRows(s, c), near = bordersYou(s, c);
   return (
     <article class="card">
-      <div class="ch"><span class="dotc" style={{ background: `var(--${LORD_COL[c.owner]})` }} /><h2>{c.name}</h2><span class="tag">{L.name}</span></div>
+      <div class="ch"><span class="dotc" style={{ background: `var(--${ownerCol(c.owner)})` }} /><h2>{c.name}</h2><span class="tag">{lord}</span></div>
       <div class="stats">
         <div class="stat"><label>People</label><b>{c.pop}</b></div>
         <div class="stat"><label>Defence</label><b>{near ? '~' + estDef(s, c) : '?'}</b><small>{near ? 'scouted' : 'unknown'}</small></div>

@@ -1,7 +1,7 @@
-import { RATION, SEASONS, TAX, atkOf, bordersYou, buyCost, counties, defence, fmtUnits, sellGain, season, taxGold, year, type GameState } from '../game';
+import { RATION, SEASONS, TAX, atkOf, NEUTRAL, bordersYou, buyCost, counties, defence, fmtUnits, sellGain, season, taxGold, year, type GameState } from '../game';
 import { LORD_COL, MoodNote, moodWord } from './format';
 import {
-  applyImport, askNew, buyLot, cancelNew, checkImport, closeSaveBox, copyExport, game, openExport, openImport, select, sellLot, showHelp, startNewGame, taxAll, typeImport,
+  applyImport, askNew, buyLot, cancelNew, setOneEach, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, select, sellLot, showHelp, startNewGame, taxAll, typeImport,
 } from './store';
 
 export function RealmPanel({ s }: { s: GameState }) {
@@ -75,6 +75,12 @@ export function RealmPanel({ s }: { s: GameState }) {
               </div>
             );
           })}
+          {counties(s, NEUTRAL).length > 0 && (
+            <div class="row">
+              <span class="dotc" style={{ background: 'var(--o-1)' }} />
+              <div class="grow"><b>No lord</b><small>{counties(s, NEUTRAL).length} counties anyone can claim{counties(s, NEUTRAL).some((c) => bordersYou(s, c)) ? ' · borders you' : ''}</small></div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -84,6 +90,21 @@ export function RealmPanel({ s }: { s: GameState }) {
         {game.ui.confirm ? (
           <>
             <p class="note" style={{ marginBottom: '8px' }}>Abandon this reign and start again?</p>
+            <p class="note" style={{ marginBottom: '4px' }}>How the reign starts:</p>
+            <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '8px' }}>
+              <button class={'btn' + (!game.ui.oneEach ? ' on' : '')} aria-pressed={!game.ui.oneEach} onClick={() => setOneEach(false)}>Three counties</button>
+              <button class={'btn' + (game.ui.oneEach ? ' on' : '')} aria-pressed={game.ui.oneEach} onClick={() => setOneEach(true)}>One each, random</button>
+            </div>
+            {!game.ui.oneEach && (
+              <>
+                <p class="note" style={{ marginBottom: '4px' }}>Counties that start with no lord (any lord may claim them):</p>
+                <div class="seg" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '8px' }}>
+                  {[0, 2, 4, 6].map((n) => (
+                    <button key={n} class={'btn' + (game.ui.wild === n ? ' on' : '')} aria-pressed={game.ui.wild === n} onClick={() => setWild(n)}>{n === 0 ? 'None' : n}</button>
+                  ))}
+                </div>
+              </>
+            )}
             <div class="seg" style={{ gridTemplateColumns: '1fr 1fr' }}>
               <button class="btn" onClick={startNewGame}>Start over</button>
               <button class="btn" onClick={cancelNew}>Keep playing</button>

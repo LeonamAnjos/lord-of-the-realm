@@ -1,4 +1,4 @@
-import { NB, counties, idlePct, seenTroops, type GameState } from '../game';
+import { NB, NEUTRAL, counties, idlePct, seenTroops, type GameState } from '../game';
 import { LORD_COL } from './format';
 import { COUNTY_PATH, ISLANDS, LAND_PATH, WAVES, center } from './hex';
 import { select } from './store';
@@ -34,7 +34,7 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
           const cls = 'hex o' + c.owner + (c.id === sel ? ' sel' : '') + (targets.has(c.id) ? ' tgt' : '');
           return (
             <g
-              key={c.id} class={cls} tabIndex={0} role="button" aria-label={`${c.name}, ${s.lords[c.owner]!.name}`}
+              key={c.id} class={cls} tabIndex={0} role="button" aria-label={`${c.name}, ${c.owner === NEUTRAL ? 'no lord' : s.lords[c.owner]!.name}`}
               onClick={() => select(c.id)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(c.id); } }}
             >
@@ -72,6 +72,9 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
             <i style={{ background: `var(--${LORD_COL[i]})` }} />{L.short} {counties(s, i).length}
           </span>
         ))}
+        {counties(s, NEUTRAL).length > 0 && (
+          <span><i style={{ background: 'var(--o-1)' }} />No lord {counties(s, NEUTRAL).length}</span>
+        )}
         <span class="jobkey">
           Jobs % on your tiles: <b style={{ color: 'var(--grain)' }}>farm</b> <b style={{ color: 'var(--wood)' }}>wood</b> <b style={{ color: 'var(--iron)' }}>mine</b> <b style={{ color: 'var(--gold)' }}>crafts</b>
         </span>

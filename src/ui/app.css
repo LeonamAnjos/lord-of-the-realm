@@ -20,6 +20,7 @@
   --o1: #4f86d0; --o1d: #263e5c;
   --o2: #43a877; --o2d: #1e4a37;
   --o3: #9b6bd0; --o3d: #43305e;
+  --o-1: #9a9482; --o-1d: #3a3730;
   --display: 'IM Fell English SC', 'Iowan Old Style', Georgia, serif;
   --body: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
 }
@@ -66,6 +67,8 @@ svg#map { width: 100%; height: auto; display: block; }
 .hex.o1 { --oc: var(--o1); --od: var(--o1d); }
 .hex.o2 { --oc: var(--o2); --od: var(--o2d); }
 .hex.o3 { --oc: var(--o3); --od: var(--o3d); }
+.hex.o-1 { --oc: var(--o-1); --od: var(--o-1d); }
+.hex.o-1 .shape { stroke-dasharray: 2 3; }
 .hex .shape { fill: var(--od); stroke: var(--oc); stroke-width: 1.5; }
 .hex.sel .shape { stroke: var(--fg); stroke-width: 3; }
 .hex.tgt .shape { stroke: var(--fg); stroke-width: 2; stroke-dasharray: 5 3; }

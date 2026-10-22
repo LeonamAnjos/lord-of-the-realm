@@ -49,6 +49,9 @@ Defence of a county = (sum of troop def + pop/10) * (1.15 + 0.2 * fort level). F
 
 Battle: attack = sum atk * rand(0.9, 1.1) against defence * rand(0.9, 1.1). Win: attacker loses `clamp(0.8*def/atk, 0.1, 0.8)` of sent troops (at least one soldier always survives); county changes hands, pop *0.85 (minimum 30), mood 25, fort -1, tax Normal, rations Normal, jobs reset. Loss: defender loses `clamp(0.8*atk/def, 0.1, 0.8)`; attacker keeps 10% of sent troops. Scout estimate of enemy defence is off by up to 15%, rounded to 5. Enemy troop counts are exact for own counties, approximate (~) at borders, "?" elsewhere.
 
+Unclaimed counties (owner `NEUTRAL`, -1): optional, chosen in the new-reign box (None, 2, 4, 6) and never in a default game, so balance and `diff-legacy` are unchanged. They are drawn from rival counties (never yours, and every rival keeps at least one), defended by 4 spearmen, and sit still: no harvest, growth, tax or upkeep. Anyone can attack ("Claim") them with the normal battle rules; rivals treat them as foes. Winning still means holding all 12.
+"One each, random" start (`oneEach`): every lord, you included, gets one random county and the other eight have no lord. Also only on request.
+
 Orders: All, Half, Strike (archers and knights), reinforce the same options, and Split (10% to 100% per troop type, rounded up, one tap to send).
 
 AI lords: per county set farm 55/45/35 by grain security (capped by the farm limit), wood 18, mine by ore, tax by mood. Recruit with gold above 35, preferring frontier counties. Attack from turn 4 on (skipping 20% of the time), when attack/defence beats 1.55 to 1.9, otherwise reinforce toward the frontier. Rivals also buy grain with gold (3 gold each, up to half their gold) when grain is under 1.2 seasons of meals. They set nothing else (no forts, no rations).
