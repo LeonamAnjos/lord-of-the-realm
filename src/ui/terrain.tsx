@@ -1,4 +1,4 @@
-import type { County } from '../game';
+import { idlePct, type County } from '../game';
 
 /** Decoration slots around the rim of a hex (offsets from its centre), clear of the text. */
 const SLOTS: [number, number][] = [[-33, -17], [33, -17], [-35, 9], [35, 9]];
@@ -28,7 +28,32 @@ export function TerrainDefs() {
     <>
       <symbol id="tpine" viewBox="0 0 8 10"><path d="M4 0l3.6 6H5.1L7.8 9.6H.2L2.9 6H.4z" /><rect x="3.4" y="9" width="1.2" height="1" /></symbol>
       <symbol id="thill" viewBox="0 0 14 9"><path d="M0 9L5 1l3 4 2-2.5L14 9z" /></symbol>
+      <symbol id="bfarm" viewBox="0 0 10 10"><path fill-rule="evenodd" d="M0 10V4l5-4 5 4v6zM3.5 10V6.5h3V10z" /></symbol>
+      <symbol id="bwood" viewBox="0 0 10 10"><circle cx="2.5" cy="7.5" r="2.5" /><circle cx="7.5" cy="7.5" r="2.5" /><circle cx="5" cy="2.8" r="2.5" /></symbol>
+      <symbol id="bmine" viewBox="0 0 10 10"><path fill-rule="evenodd" d="M0 10C0 4 3 1 5 1s5 3 5 9zM3.5 10V7a1.5 1.5 0 0 1 3 0v3z" /></symbol>
+      <symbol id="bcraft" viewBox="0 0 10 10"><path d="M0 1h10v3H7v3l1.5 1v2h-7V8L3 7V4H0z" /></symbol>
     </>
+  );
+}
+
+const BUILDINGS: { key: 'farm' | 'wood' | 'mine' | 'craft'; sym: string; slot: [number, number] }[] = [
+  { key: 'farm', sym: '#bfarm', slot: [-34, -17] },
+  { key: 'wood', sym: '#bwood', slot: [34, -17] },
+  { key: 'mine', sym: '#bmine', slot: [-37, 9] },
+  { key: 'craft', sym: '#bcraft', slot: [37, 9] },
+];
+
+/** Your own counties show what the people do: one building per job, drawn bigger as its share grows. */
+export function Buildings({ c, x, y }: { c: County; x: number; y: number }) {
+  const pct = { farm: c.work.farm, wood: c.work.wood, mine: c.work.mine, craft: idlePct(c) };
+  return (
+    <g class="terrain" aria-hidden="true">
+      {BUILDINGS.map(({ key, sym, slot }) => {
+        if (pct[key] <= 0) return null;
+        const size = 6 + Math.min(pct[key], 75) * 0.08;
+        return <use key={key} class={'b-' + key} href={sym} x={x + slot[0] - size / 2} y={y + slot[1] - size / 2} width={size} height={size} />;
+      })}
+    </g>
   );
 }
 
