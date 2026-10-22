@@ -288,3 +288,4 @@ button.warn { cursor: pointer; }
 /* Dock: things to check before ending the season */
 .todo { font: inherit; font-size: 13.5px; background: none; border: 0; padding: 0; color: var(--warn); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 20px; }
 .todo.danger { color: var(--bad); }
+.wdot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: baseline; }

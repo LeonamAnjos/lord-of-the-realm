@@ -59,7 +59,7 @@ export function attentionSheet(items: Warn[], go: (id: number) => void): Sheet {
       <div class="rows">
         {items.map((w) => (w.sel === undefined
           ? <p key={w.key}>{w.text}</p>
-          : <button key={w.key} class="btn" style={{ textAlign: 'left', height: 'auto', padding: '8px 12px' }} onClick={() => go(w.sel!)}>{w.text}</button>))}
+          : <button key={w.key} class="btn" style={{ textAlign: 'left', height: 'auto', padding: '8px 12px' }} onClick={() => go(w.sel!)}>{w.owner !== undefined && <i class="wdot" style={{ background: `var(--o${w.owner})` }} />}{w.text}</button>))}
       </div>
     ),
   };

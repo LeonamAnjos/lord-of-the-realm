@@ -7,6 +7,8 @@ export interface Warn {
   sel?: number;
   /** a nudge rather than a danger: shown in the dock list, not as a chip in the top bar */
   soft?: boolean;
+  /** lord the item is about, for a colour dot that matches the map */
+  owner?: number;
 }
 
 /** Gold you hold above this is "unspent" in the dock list. */
@@ -19,7 +21,7 @@ export function attention(s: GameState): Warn[] {
   if (st.gold + f.gold < 0) w.push({ key: 'gold', text: 'Treasury runs dry: soldiers will desert' });
   for (const c of counties(s, 0)) if (c.mood < 20) w.push({ key: 'u' + c.id, text: `Unrest in ${c.name}`, sel: c.id });
   for (const t of threats(s).slice(0, 3)) {
-    w.push({ key: 't' + t.to.id, text: `${lordName(s, t.from.owner)} threatens ${t.to.name}`, sel: t.to.id });
+    w.push({ key: 't' + t.to.id, text: `${lordName(s, t.from.owner)} (${t.from.name}) threatens ${t.to.name}`, sel: t.to.id, owner: t.from.owner });
   }
   if (st.gold >= IDLE_GOLD) w.push({ key: 'idle', text: `${Math.floor(st.gold)} gold unspent: muster troops or raise walls`, soft: true });
   return w;

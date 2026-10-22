@@ -1,6 +1,6 @@
 import { SEASONS, SEASON_NOTE, forecast, season, year, type GameState } from '../game';
 import { attention } from './attention';
-import { signed } from './format';
+import { ownerCol, signed } from './format';
 import { select } from './store';
 
 export function Hud({ s }: { s: GameState }) {
@@ -31,7 +31,11 @@ export function Hud({ s }: { s: GameState }) {
         <div class="warns" role="status">
           {warn.map((x) => (x.sel === undefined
             ? <span key={x.key} class="warn">{x.text}</span>
-            : <button key={x.key} class="warn" onClick={() => select(x.sel!)}>{x.text}</button>))}
+            : (
+              <button key={x.key} class="warn" onClick={() => select(x.sel!)}>
+                {x.owner !== undefined && <i class="wdot" style={{ background: `var(--${ownerCol(x.owner)})` }} />}{x.text}
+              </button>
+            )))}
         </div>
       )}
     </header>
