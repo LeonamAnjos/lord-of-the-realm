@@ -66,13 +66,19 @@ svg#map { width: 100%; height: auto; display: block; }
 .hex.o1 { --oc: var(--o1); --od: var(--o1d); }
 .hex.o2 { --oc: var(--o2); --od: var(--o2d); }
 .hex.o3 { --oc: var(--o3); --od: var(--o3d); }
-.hex polygon { fill: var(--od); stroke: var(--oc); stroke-width: 1.5; }
-.hex.sel polygon { stroke: var(--fg); stroke-width: 3; }
-.hex.tgt polygon { stroke: var(--fg); stroke-width: 2; stroke-dasharray: 5 3; }
-.hex:focus-visible polygon { stroke: var(--fg); stroke-width: 3; }
+.hex .shape { fill: var(--od); stroke: var(--oc); stroke-width: 1.5; }
+.hex.sel .shape { stroke: var(--fg); stroke-width: 3; }
+.hex.tgt .shape { stroke: var(--fg); stroke-width: 2; stroke-dasharray: 5 3; }
+.hex:focus-visible .shape { stroke: var(--fg); stroke-width: 3; }
 .hex .keep, .hex .ico { fill: var(--oc); }
 .hex text { fill: var(--fg); font: 700 10.5px var(--body); text-anchor: middle; pointer-events: none; }
 .hex text.n { font-weight: 500; font-size: 10px; text-anchor: start; }
+.terrain { pointer-events: none; opacity: .85; }
+.t-wood { fill: #4f8a5a; } .t-hill { fill: #7d8a99; } .t-field rect { fill: #a8964a; stroke: #6d5f2c; stroke-width: .8; } .t-field line { stroke: #d8c978; stroke-width: 1; stroke-linecap: round; }
+.hex .sol, .hex .wall { fill: var(--oc); }
+.b-farm { fill: var(--grain); } .b-wood { fill: var(--wood); } .b-mine { fill: var(--iron); } .b-craft { fill: var(--gold); }
+.road { stroke: var(--dim); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 1 4; pointer-events: none; opacity: .7; }
+.road.mine { stroke: #d8b878; stroke-width: 3; stroke-dasharray: none; opacity: .9; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 2px 10px 0; font-size: 12.5px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
@@ -151,3 +157,66 @@ h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .14em; text-transform: up
 /* Save and restore */
 .savetext { width: 100%; resize: vertical; background: var(--bg2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
 .savetext:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+/* County scene */
+.scene-wrap { display: flex; flex-direction: column; gap: 6px; }
+svg.scene { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--line); --sky: #26382f; --gr: #2e4a33; --fa: #6b8a3e; --far: #223a2c; }
+svg.scene.se1 { --sky: #2b4636; --gr: #35553a; --fa: #9bb04a; --far: #284232; }
+svg.scene.se2 { --sky: #4a3a2a; --gr: #5a4a2a; --fa: #d1a93a; --far: #3f3224; }
+svg.scene.se3 { --sky: #323c46; --gr: #aeb7bb; --fa: #8f9690; --far: #6f7b85; }
+.scene .sky { fill: var(--sky); } .scene .ground { fill: var(--gr); } .scene .far { fill: var(--far); }
+.scene .hill { fill: var(--far); } .scene .hill.rock { fill: #5b6672; }
+.scene .field { fill: var(--fa); opacity: .9; }
+.scene .mine-door { fill: #14181b; }
+.scene .s-keep rect, .scene .s-keep path { fill: var(--o0); } .scene .s-keep .door { fill: var(--o0d); } .scene .s-keep .wallb { fill: var(--o0d); }
+.scene .s-house rect { fill: #8c7a63; } .scene .s-house .roof { fill: var(--o0d); } .scene .s-house .door { fill: #3b3329; }
+.scene .smithy rect { fill: #5d5a56; } .scene .smithy .chim { fill: #44423f; }
+.scene .smoke { fill: #cfd3d6; opacity: .45; animation: smoke 3s ease-out infinite; transform-box: fill-box; }
+@keyframes smoke { from { transform: translateY(0); opacity: .5; } to { transform: translateY(-12px); opacity: 0; } }
+.scene .s-tree path { fill: #3f7a4c; } .scene .s-tree .trunk { fill: #5b4332; }
+svg.scene.se2 .s-tree path { fill: #b7742f; } svg.scene.se3 .s-tree path { fill: #dfe6e8; }
+.scene .fig circle { fill: #e8d2b4; }
+.scene .fm path, .scene .fm circle:first-child { }
+.scene .ff path { fill: var(--grain); } .scene .fw path { fill: var(--wood); } .scene .fm path { fill: var(--iron); } .scene .fc path { fill: var(--gold); } .scene .fs path { fill: var(--o0); }
+.scene .sold rect { fill: #c9c2b0; }
+.scene-note { fill: var(--dim); font: 500 8px var(--body); }
+.scene-cap b { font-weight: 700; }
+.scene-cap .ff { color: var(--grain); } .scene-cap .fw { color: var(--wood); } .scene-cap .fm { color: var(--iron); } .scene-cap .fc { color: var(--gold); } .scene-cap .fs { color: var(--o0); }
+@media (prefers-reduced-motion: reduce) { .scene .smoke { animation: none; } }
+
+/* Battle sheet art */
+.battle-art svg { width: 100%; height: auto; display: block; border-radius: 8px; border: 1px solid var(--line); }
+.battle-art .b-sky { fill: #2a3238; } .battle-art .b-gnd { fill: #2e4a33; }
+.battle-art .b-keep rect, .battle-art .b-keep path { fill: #6f6a60; } .battle-art .b-keep .door { fill: #25221e; } .battle-art .b-keep .pole { fill: #cfc9b8; }
+.battle-art .b-sol rect { fill: #cfc9b8; } .battle-art .b-sol .shield { fill: var(--fg); opacity: .8; }
+.battle-art .fall { opacity: .15; }
+.battle-art .spark { fill: var(--gold); opacity: 0; }
+.battle-art .flag.old { opacity: 0; } .battle-art.held .flag.new { opacity: 1; }
+.battle-art.held .flag.old { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .battle-art .army.a { animation: march-a 1s ease-out both; }
+  .battle-art .army.d { animation: march-d 1s ease-out both; }
+  .battle-art .fall { animation: fall .7s 1.1s ease-in both; }
+  .battle-art .spark { animation: clash .6s .9s ease-out both; transform-box: fill-box; transform-origin: center; }
+  .battle-art.won .flag.old { animation: flag-out .4s 1.5s both; opacity: 1; }
+  .battle-art.won .flag.new { animation: flag-up .6s 1.8s ease-out both; }
+}
+@keyframes march-a { from { transform: translateX(-110px); } }
+@keyframes march-d { from { transform: translateX(30px); } }
+@keyframes fall { from { opacity: 1; transform: translateY(0); } }
+@keyframes clash { 0% { opacity: 0; transform: scale(.3); } 40% { opacity: 1; transform: scale(1.3); } 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes flag-out { to { opacity: 0; } }
+@keyframes flag-up { from { opacity: 0; transform: translateY(14px); } }
+
+/* Sea and land behind the counties */
+.sea { fill: #14232a; }
+.waves path { fill: none; stroke: #24404a; stroke-width: 1; stroke-linecap: round; }
+.shallow { fill: #2a4b54; stroke: #2a4b54; stroke-width: 9; stroke-linejoin: round; }
+.land { fill: #34432f; }
+
+/* Ending a season: the board fades out, then in */
+@media (prefers-reduced-motion: no-preference) {
+  .shell.fade-out { opacity: 0; transition: opacity .28s ease-in; }
+  .shell.fade-in { animation: board-in .45s ease-out both; }
+}
+@keyframes board-in { from { opacity: 0; } }
