@@ -1,4 +1,5 @@
 import type { ComponentChildren } from 'preact';
+import { BattleArt } from './battle';
 import { fmtUnits, lordName, type BattleReport, type GameState } from '../game';
 
 export interface Sheet { title: string; body: ComponentChildren; btn: string; cb?: () => void }
@@ -13,6 +14,7 @@ export function battleSheet(s: GameState, rep: BattleReport): Sheet {
     title, btn: 'Continue',
     body: (
       <>
+        <BattleArt rep={rep} />
         <p class="big">Attack {rep.atk} against defence {rep.def}</p>
         <p>{you ? 'You sent' : lordName(s, rep.att) + ' sent'} {fmtUnits(rep.sent)} from {rep.from}.</p>
         <ul>
