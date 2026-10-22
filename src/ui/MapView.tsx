@@ -2,6 +2,7 @@ import { NB, counties, idlePct, seenTroops, type GameState } from '../game';
 import { LORD_COL } from './format';
 import { R, center, hexPts } from './hex';
 import { select } from './store';
+import { Figures, Fort, GarrisonDefs } from './garrison';
 import { Buildings, RoadStub, Terrain, TerrainDefs } from './terrain';
 
 export function MapView({ s, sel }: { s: GameState; sel: number }) {
@@ -18,6 +19,7 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
           <symbol id="ipop" viewBox="0 0 10 10"><circle cx="5" cy="3" r="2.2" /><path d="M1 10c0-3 2-4.5 4-4.5s4 1.5 4 4.5z" /></symbol>
           <symbol id="ishield" viewBox="0 0 10 10"><path d="M5 .5l4 1.3v3.2c0 2.3-1.6 3.9-4 4.8-2.4-.9-4-2.5-4-4.8V1.8z" /></symbol>
           <TerrainDefs />
+          <GarrisonDefs />
         </defs>
         {order.map((c) => {
           const p = center(c.id);
@@ -31,6 +33,8 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
               <polygon points={hexPts(p.x, p.y, R - 2.5)} />
               {c.owner === 0 ? <Buildings c={c} x={p.x} y={p.y} /> : <Terrain c={c} x={p.x} y={p.y} />}
               <use class="keep" href="#keep" x={p.x - 8} y={p.y - 26} width="16" height="10" />
+              {c.owner === 0 && <Fort level={c.fort} x={p.x} y={p.y} />}
+              <Figures s={s} c={c} x={p.x} y={p.y} />
               <text x={p.x} y={p.y + 3}>{c.name}</text>
               <use class="ico" href="#ipop" x={p.x - 29} y={p.y + 10} width="9" height="9" />
               <text class="n" x={p.x - 18} y={p.y + 18}>{c.pop}</text>
