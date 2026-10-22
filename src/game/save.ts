@@ -1,4 +1,4 @@
-import { NC } from './data';
+import { NC, NORMAL_TAX } from './data';
 import { applyFarmLimit } from './economy';
 import { createRng, type Rng } from './rng';
 import { counties, zero } from './state';
@@ -45,7 +45,7 @@ export function parseSave(text: string | null): Loaded | null {
       work: { ...c.work, mine: c.i === 0 ? 0 : c.work.mine },
       g: c.g, arr,
       mus: c.mus ?? { spear: arr.spear, archer: arr.archer, knight: arr.knight },
-      tax: c.tax ?? s.lords[c.owner].tax,
+      tax: c.tax ?? s.lords[c.owner]?.tax ?? NORMAL_TAX,
       ration: c.ration ?? 1,
       farmPref: c.farmPref ?? c.work.farm,
       pf: c.pf ?? 0,

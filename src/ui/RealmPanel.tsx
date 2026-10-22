@@ -1,7 +1,8 @@
-import { RATION, SEASONS, TAX, atkOf, bordersYou, buyCost, counties, defence, fmtUnits, sellGain, season, taxGold, year, type GameState } from '../game';
+import { RATION, SEASONS, TAX, atkOf, NEUTRAL, bordersYou, buyCost, counties, defence, fmtUnits, sellGain, season, taxGold, year, type GameState } from '../game';
 import { LORD_COL, MoodNote, moodWord } from './format';
+import { Section } from './Section';
 import {
-  applyImport, askNew, buyLot, cancelNew, checkImport, closeSaveBox, copyExport, game, openExport, openImport, select, sellLot, showHelp, startNewGame, taxAll, typeImport,
+  applyImport, askNew, buyLot, cancelNew, setOneEach, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, select, sellLot, showHelp, startNewGame, taxAll, typeImport,
 } from './store';
 
 export function RealmPanel({ s }: { s: GameState }) {
@@ -9,8 +10,7 @@ export function RealmPanel({ s }: { s: GameState }) {
   const income = mine.reduce((a, c) => a + taxGold(c), 0);
   return (
     <article class="card">
-      <div>
-        <h3>Armies</h3>
+      <Section id="armies" title="Armies">
         <div class="rows">
           {mine.map((c) => (
             <div class="row" key={c.id}>
@@ -22,16 +22,14 @@ export function RealmPanel({ s }: { s: GameState }) {
           ))}
           <p class="note">There is no single army. Each county keeps its own garrison, and you send troops between neighbouring counties from the Orders list.</p>
         </div>
-      </div>
+      </Section>
 
-      <div>
-        <h3>Taxes</h3>
+      <Section id="taxes" title="Taxes">
         <p class="note" style={{ marginBottom: '8px' }}>Tax is set in each county. Your counties bring in about {Math.round(income)} gold a season in all. To set the same rate everywhere:</p>
         <div class="seg">{TAX.map((t, i) => <button key={i} class="btn" onClick={() => taxAll(i)}>{t.n}</button>)}</div>
-      </div>
+      </Section>
 
-      <div>
-        <h3>Market</h3>
+      <Section id="market" title="Market">
         <div class="rows">
           {(['grain', 'wood', 'iron'] as const).map((k) => {
             const buy = buyCost(s, k), sell = sellGain(s, k);
@@ -45,10 +43,9 @@ export function RealmPanel({ s }: { s: GameState }) {
           })}
           <p class="note">Grain is dearest in winter and cheapest at harvest. Merchants keep a margin on every trade.</p>
         </div>
-      </div>
+      </Section>
 
-      <div>
-        <h3>Mood</h3>
+      <Section id="mood" title="Mood">
         <div class="rows">
           {mine.map((c) => (
             <div class="row" key={c.id}>
@@ -61,10 +58,9 @@ export function RealmPanel({ s }: { s: GameState }) {
           ))}
           <p class="note">Population follows mood. Growth starts above 40, reaches full speed at 70 and is 1.5 times faster at 100. Below 40 people slowly leave, and below 20 they leave quickly.</p>
         </div>
-      </div>
+      </Section>
 
-      <div>
-        <h3>Rival lords</h3>
+      <Section id="rivals" title="Rival lords">
         <div class="rows">
           {[1, 2, 3].map((i) => {
             const R2 = s.lords[i]!, n = counties(s, i).length, b = counties(s, i).some((c) => bordersYou(s, c));
@@ -75,8 +71,14 @@ export function RealmPanel({ s }: { s: GameState }) {
               </div>
             );
           })}
+          {counties(s, NEUTRAL).length > 0 && (
+            <div class="row">
+              <span class="dotc" style={{ background: 'var(--o-1)' }} />
+              <div class="grow"><b>No lord</b><small>{counties(s, NEUTRAL).length} counties anyone can claim{counties(s, NEUTRAL).some((c) => bordersYou(s, c)) ? ' · borders you' : ''}</small></div>
+            </div>
+          )}
         </div>
-      </div>
+      </Section>
 
       <SaveBox s={s} />
 
@@ -84,6 +86,21 @@ export function RealmPanel({ s }: { s: GameState }) {
         {game.ui.confirm ? (
           <>
             <p class="note" style={{ marginBottom: '8px' }}>Abandon this reign and start again?</p>
+            <p class="note" style={{ marginBottom: '4px' }}>How the reign starts:</p>
+            <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '8px' }}>
+              <button class={'btn' + (!game.ui.oneEach ? ' on' : '')} aria-pressed={!game.ui.oneEach} onClick={() => setOneEach(false)}>Three counties</button>
+              <button class={'btn' + (game.ui.oneEach ? ' on' : '')} aria-pressed={game.ui.oneEach} onClick={() => setOneEach(true)}>One each, random</button>
+            </div>
+            {!game.ui.oneEach && (
+              <>
+                <p class="note" style={{ marginBottom: '4px' }}>Counties that start with no lord (any lord may claim them):</p>
+                <div class="seg" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '8px' }}>
+                  {[0, 2, 4, 6].map((n) => (
+                    <button key={n} class={'btn' + (game.ui.wild === n ? ' on' : '')} aria-pressed={game.ui.wild === n} onClick={() => setWild(n)}>{n === 0 ? 'None' : n}</button>
+                  ))}
+                </div>
+              </>
+            )}
             <div class="seg" style={{ gridTemplateColumns: '1fr 1fr' }}>
               <button class="btn" onClick={startNewGame}>Start over</button>
               <button class="btn" onClick={cancelNew}>Keep playing</button>
@@ -104,8 +121,7 @@ export function RealmPanel({ s }: { s: GameState }) {
 function SaveBox({ s }: { s: GameState }) {
   const b = game.ui.saveBox;
   return (
-    <div>
-      <h3>Save and restore</h3>
+    <Section id="save" title="Save and restore" closed>
       <p class="note" style={{ marginBottom: '8px' }}>
         The game saves itself on this device after every move. To back it up or play on another device, export the save as text, then paste it there with Import.
       </p>
@@ -148,6 +164,6 @@ function SaveBox({ s }: { s: GameState }) {
           )}
         </div>
       )}
-    </div>
+    </Section>
   );
 }

@@ -1,4 +1,4 @@
-import { KINDS, NB, NC, NORMAL_RATION, NORMAL_TAX, U } from './data';
+import { KINDS, NB, NC, NEUTRAL, NORMAL_RATION, NORMAL_TAX, U } from './data';
 import { applyFarmLimit } from './economy';
 import { range, type Rng } from './rng';
 import { atkOf, clamp, counties, defaultWork, defence, logEv, lordName, movable, total, troops, zero } from './state';
@@ -67,6 +67,10 @@ export function battle(s: GameState, rng: Rng, from: County, to: County, m: Unit
 
 export function battleLog(s: GameState, rep: BattleReport): string {
   const a = lordName(s, rep.att), d = lordName(s, rep.dfn);
+  if (rep.dfn === NEUTRAL) {
+    if (rep.att === 0) return rep.won ? `You claimed ${rep.to}, which had no lord.` : `Your attack on ${rep.to} failed.`;
+    return rep.won ? `${a} claimed ${rep.to}, which had no lord.` : `${rep.to} held out against ${a}.`;
+  }
   if (rep.att === 0) return rep.won ? `You took ${rep.to} from ${d}.` : `Your attack on ${rep.to} failed.`;
   if (rep.dfn === 0) return rep.won ? `${a} took ${rep.to} from you.` : `You held ${rep.to} against ${a}.`;
   return rep.won ? `${a} took ${rep.to} from ${d}.` : `${d} held ${rep.to} against ${a}.`;
@@ -120,6 +124,24 @@ export const estNoise = (s: GameState, c: County): number => (((s.turn * 7 + c.i
 export const round5 = (v: number): number => Math.max(5, Math.round(v / 5) * 5);
 export const estDef = (s: GameState, c: County): number => round5(defence(c) * (1 + estNoise(s, c)));
 export const bordersYou = (s: GameState, c: County): boolean => NB[c.id]!.some((n) => s.C[n]!.owner === 0);
+
+/** A rival army that looks strong enough to take one of your counties. `ratio` is its scouted attack over that county's defence. */
+export interface Threat { from: County; to: County; ratio: number }
+
+/** Rival counties touching yours whose scouted army (off by up to 15%, as with scouting) could break the county it borders, strongest first. */
+export function threats(s: GameState, min = 1.2): Threat[] {
+  const best = new Map<number, Threat>();
+  for (const to of counties(s, 0)) {
+    const def = defence(to);
+    for (const n of NB[to.id]!) {
+      const from = s.C[n]!;
+      if (from.owner <= 0) continue;
+      const ratio = (atkOf(from.g) * (1 + estNoise(s, from))) / def;
+      if (ratio >= min && ratio > (best.get(to.id)?.ratio ?? 0)) best.set(to.id, { from, to, ratio });
+    }
+  }
+  return [...best.values()].sort((a, b) => b.ratio - a.ratio);
+}
 
 /** What you can see of a county's garrison: exact if yours, approximate (~) at the border, "?" elsewhere. */
 export function seenTroops(s: GameState, c: County): string {

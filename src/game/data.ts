@@ -45,6 +45,8 @@ export const DEF: [string, number, number, number][] = [
   ['Brackenmoor', 1, 1.2, 0.3], ['Dunmere', 1.2, 0.8, 0.4], ['Kestrelmoor', 0.8, 1, 0.9], ['Marrowmere', 1.1, 0.9, 0.5],
 ];
 export const OWN = [1, 1, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3];
+/** `owner` of a county that belongs to no lord. */
+export const NEUTRAL = -1;
 export const COLS = 4;
 export const ROWS = 3;
 export const NC = 12;

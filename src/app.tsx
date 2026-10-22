@@ -1,6 +1,6 @@
 import './ui/app.css';
 import { Chronicle } from './ui/Chronicle';
-import { Dock, SheetView, Tabs, Toast } from './ui/Chrome';
+import { Dock, Panel, SheetView, Toast } from './ui/Chrome';
 import { FoeCounty, OwnCounty } from './ui/CountyPanel';
 import { Hud } from './ui/Hud';
 import { MapView } from './ui/MapView';
@@ -17,13 +17,12 @@ export function App() {
     <>
       <div class={g.fade ? 'shell fade-' + g.fade : 'shell'}>
         <Hud s={s} />
-        <MapView s={s} sel={ui.sel} />
-        <Tabs tab={ui.tab} />
-        <section>
-          {ui.tab === 'realm' ? <RealmPanel s={s} />
-            : ui.tab === 'chronicle' ? <Chronicle s={s} />
+        {!ui.full && <MapView s={s} sel={ui.sel} />}
+        <Panel>
+          {ui.tab === 'realm' ? <div class="pbody"><RealmPanel s={s} /></div>
+            : ui.tab === 'chronicle' ? <div class="pbody"><Chronicle s={s} /></div>
             : c.owner === 0 ? <OwnCounty s={s} c={c} /> : <FoeCounty s={s} c={c} />}
-        </section>
+        </Panel>
       </div>
       <Dock s={s} />
       <SheetView />

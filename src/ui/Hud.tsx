@@ -1,12 +1,10 @@
 import { SEASONS, SEASON_NOTE, forecast, season, year, type GameState } from '../game';
-import { signed } from './format';
+import { attention } from './attention';
+import { ownerCol, signed } from './format';
+import { select } from './store';
 
 export function Hud({ s }: { s: GameState }) {
-  const se = season(s), st = s.lords[0]!.stock, f = forecast(s, 0);
-  const alert =
-    st.grain + f.grain < 0 ? 'Grain will run out before the season ends. Buy grain or move workers to the farms.'
-    : st.gold + f.gold < 0 ? 'The treasury will run dry and soldiers will desert.'
-    : null;
+  const se = season(s), st = s.lords[0]!.stock, f = forecast(s, 0), warn = attention(s).filter((x) => !x.soft);
   return (
     <header class="hud">
       <div class="hud-top">
@@ -29,7 +27,17 @@ export function Hud({ s }: { s: GameState }) {
           );
         })}
       </div>
-      {alert && <div class="alert">{alert}</div>}
+      {warn.length > 0 && (
+        <div class="warns" role="status">
+          {warn.map((x) => (x.sel === undefined
+            ? <span key={x.key} class="warn">{x.text}</span>
+            : (
+              <button key={x.key} class="warn" onClick={() => select(x.sel!)}>
+                {x.owner !== undefined && <i class="wdot" style={{ background: `var(--${ownerCol(x.owner)})` }} />}{x.text}
+              </button>
+            )))}
+        </div>
+      )}
     </header>
   );
 }

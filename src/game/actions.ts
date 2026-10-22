@@ -56,6 +56,7 @@ export function buildFort(s: GameState, c: County): boolean {
 
 export const setTax = (c: County, v: number): void => { c.tax = v; };
 export const setRation = (c: County, v: number): void => { c.ration = v; };
+export function setRationAll(s: GameState, v: number): void { for (const c of s.C) if (c.owner === 0) c.ration = v; }
 export function setTaxAll(s: GameState, v: number): void { for (const c of s.C) if (c.owner === 0) c.tax = v; }
 
 /** A player order. Only your own counties can send, and nothing moves once the game is over. */
