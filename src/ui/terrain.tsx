@@ -74,9 +74,16 @@ export function Terrain({ c, x, y }: { c: County; x: number; y: number }) {
             <use key={j} class="t-hill" href="#thill" x={cx - 6 + (j - (n - 1) / 2) * 5} y={cy - 4 - (j === 1 ? 2 : 0)} width="12" height="8" />
           ));
         }
-        return Array.from({ length: n }, (_, j) => (
-          <rect key={j} class="t-field" x={cx - 6} y={cy - 5 + j * 3.4} width="12" height="2.4" rx="1" />
-        ));
+        // one ploughed plot: bigger with better soil, furrows run across it
+        const w = 8 + n * 1.6, h = 8;
+        return (
+          <g key="field" class="t-field">
+            <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx="1.5" />
+            {Array.from({ length: n + 1 }, (_, j) => (
+              <line key={j} x1={cx - w / 2 + 1.5} x2={cx + w / 2 - 1.5} y1={cy - h / 2 + 2 + j * ((h - 4) / n)} y2={cy - h / 2 + 2 + j * ((h - 4) / n)} />
+            ))}
+          </g>
+        );
       })}
     </g>
   );
