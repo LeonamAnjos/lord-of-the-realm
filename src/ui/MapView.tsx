@@ -75,9 +75,6 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
         {counties(s, NEUTRAL).length > 0 && (
           <span><i style={{ background: 'var(--o-1)' }} />No lord {counties(s, NEUTRAL).length}</span>
         )}
-        <span class="jobkey">
-          Jobs % on your tiles: <b style={{ color: 'var(--grain)' }}>farm</b> <b style={{ color: 'var(--wood)' }}>wood</b> <b style={{ color: 'var(--iron)' }}>mine</b> <b style={{ color: 'var(--gold)' }}>crafts</b>
-        </span>
       </div>
     </section>
   );

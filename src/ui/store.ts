@@ -9,6 +9,7 @@ import {
 import { battleSheet, helpSheet, overSheet, type Sheet } from './sheets';
 
 export type Tab = 'county' | 'realm' | 'chronicle';
+export type CTab = 'work' | 'policy' | 'troops' | 'orders';
 
 export interface Ui {
   sel: number;
@@ -17,6 +18,10 @@ export interface Ui {
   help: boolean;
   /** "start over?" question is open */
   confirm: boolean;
+  /** which part of your county the panel shows */
+  ctab: CTab;
+  /** the panel is pulled up over the map */
+  full: boolean;
   /** counties that start with no lord in the next reign */
   wild: number;
   /** the next reign starts with one random county for every lord */
@@ -30,7 +35,7 @@ export interface Ui {
 export const game = {
   s: undefined as unknown as GameState,
   rng: undefined as unknown as Rng,
-  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
+  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, ctab: 'work', full: false, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
   sheets: [] as Sheet[],
   toast: null as string | null,
   /** the board fades out while a season ends, then back in with the new one */
@@ -100,6 +105,8 @@ export function boot(): void {
 
 /* ---------- actions ---------- */
 export const select = (id: number): void => act(() => { game.ui.sel = id; game.ui.tab = 'county'; });
+export const setCtab = (t: CTab): void => act(() => { game.ui.ctab = t; });
+export const setFull = (v: boolean): void => act(() => { game.ui.full = v; });
 export const setTab = (tab: Tab): void => act(() => { game.ui.tab = tab; game.ui.confirm = false; });
 const sel = () => game.s.C[game.ui.sel]!;
 

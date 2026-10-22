@@ -5,7 +5,7 @@ import {
 import { MoodNote, ownerCol, PopNote, moodCol, moodWord, pips } from './format';
 import { CountyScene } from './scene';
 import { Order, orderRows } from './Orders';
-import { adjustWork, fort, muster, ration, tax, undo } from './store';
+import { adjustWork, fort, game, muster, ration, setCtab, tax, undo, type CTab } from './store';
 
 const LABELS: Record<keyof Work, string> = { farm: 'Farmland', wood: 'Woodcutters', mine: 'Miners' };
 
@@ -14,25 +14,34 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
   const fortNext = FORT[c.fort];
   const rows = orderRows(s, c);
   const taxT = TAX[c.tax]!, ratT = RATION[c.ration]!;
+  const ctab = game.ui.ctab;
   return (
-    <article class="card">
-      <div class="ch"><span class="dotc" style={{ background: 'var(--o0)' }} /><h2>{c.name}</h2><span class="tag">Your county</span></div>
-      <CountyScene s={s} c={c} />
-      <div class="stats">
-        <div class="stat"><label>People</label><b>{c.pop}</b><small>of {Math.round(capOf(c))}</small><PopNote s={s} c={c} /></div>
-        <div class="stat">
-          <label>Mood</label><b>{moodWord(c.mood)}</b>
-          <div class="bar"><i style={{ width: c.mood + '%', background: moodCol(c.mood) }} /></div>
-          <MoodNote s={s} c={c} />
+    <>
+      <div class="phead">
+        <div class="ch"><span class="dotc" style={{ background: 'var(--o0)' }} /><h2>{c.name}</h2><span class="tag">Your county</span></div>
+        <div class="stats">
+          <div class="stat"><label>People</label><b>{c.pop}</b><small>of {Math.round(capOf(c))}</small><PopNote s={s} c={c} /></div>
+          <div class="stat">
+            <label>Mood</label><b>{moodWord(c.mood)}</b>
+            <div class="bar"><i style={{ width: c.mood + '%', background: moodCol(c.mood) }} /></div>
+            <MoodNote s={s} c={c} />
+          </div>
+          <div class="stat"><label>Defence</label><b>{Math.round(defence(c))}</b><small>attack {atkOf(c.g)}</small></div>
         </div>
-        <div class="stat"><label>Defence</label><b>{Math.round(defence(c))}</b><small>attack {atkOf(c.g)}</small></div>
+        <SubTabs tab={ctab} orders={rows.length} />
       </div>
-      <div class="chips">
-        <span class="chip">Soil<b>{pips(c.f)}</b></span>
-        <span class="chip">Timber<b>{pips(c.w)}</b></span>
-        <span class="chip">Ore<b>{pips(c.i)}</b></span>
-      </div>
-
+      <div class="pbody" key={ctab}>
+        {ctab === 'work' && (
+          <>
+            {game.ui.full && <CountyScene s={s} c={c} />}
+            <p class="note jobkey">
+              Jobs % on your map tiles: <b style={{ color: 'var(--grain)' }}>farm</b> <b style={{ color: 'var(--wood)' }}>wood</b> <b style={{ color: 'var(--iron)' }}>mine</b> <b style={{ color: 'var(--gold)' }}>crafts</b>
+            </p>
+            <div class="chips">
+              <span class="chip">Soil<b>{pips(c.f)}</b></span>
+              <span class="chip">Timber<b>{pips(c.w)}</b></span>
+              <span class="chip">Ore<b>{pips(c.i)}</b></span>
+            </div>
       <div>
         <h3>Workers</h3>
         <div class="rows">
@@ -60,7 +69,10 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
           </p>
         </div>
       </div>
-
+          </>
+        )}
+        {ctab === 'policy' && (
+          <>
       <div>
         <h3>Tax</h3>
         <div class="seg">{TAX.map((t, i) => <button key={i} class={'btn ' + (c.tax === i ? 'on' : '')} onClick={() => tax(i)}>{t.n}</button>)}</div>
@@ -68,7 +80,6 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
           {taxT.n} tax: about {Math.round(c.pop * taxT.g)} gold a season, mood {taxT.m >= 0 ? '+' : ''}{taxT.m} a season (well-fed people recover 2 more).
         </p>
       </div>
-
       <div>
         <h3>Rations</h3>
         <div class="seg" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
@@ -78,7 +89,10 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
           {ratT.n} rations: this county eats {Math.round(eat(c))} grain a season (people and soldiers), mood {ratT.m >= 0 ? '+' : ''}{ratT.m} a season while the realm is fed. Scant rations save grain but sour the mood.
         </p>
       </div>
-
+          </>
+        )}
+        {ctab === 'troops' && (
+          <>
       <div>
         <h3>Garrison</h3>
         <div class="rows">
@@ -107,7 +121,10 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
           )}
         </div>
       </div>
-
+          </>
+        )}
+        {ctab === 'orders' && (
+          <>
       <div>
         <h3>Orders</h3>
         <div class="rows">
@@ -115,20 +132,40 @@ export function OwnCounty({ s, c }: { s: GameState; c: County }) {
           <p class="note">Strike force sends archers and knights and leaves the spearmen at home. Button numbers are the attack you would bring. Colour shows how it compares with the scouts’ estimate of the defence.</p>
         </div>
       </div>
-    </article>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+const SUBTABS: [CTab, string][] = [['work', 'Work'], ['policy', 'Policy'], ['troops', 'Troops'], ['orders', 'Orders']];
+
+function SubTabs({ tab, orders }: { tab: CTab; orders: number }) {
+  return (
+    <nav class="subtabs" role="tablist" aria-label="County">
+      {SUBTABS.map(([id, label]) => (
+        <button key={id} role="tab" aria-selected={id === tab} onClick={() => setCtab(id)}>
+          {label}{id === 'orders' && orders > 0 ? <i>{orders}</i> : null}
+        </button>
+      ))}
+    </nav>
   );
 }
 
 export function FoeCounty({ s, c }: { s: GameState; c: County }) {
   const lord = c.owner === NEUTRAL ? 'No lord' : s.lords[c.owner]!.name, rows = orderRows(s, c), near = bordersYou(s, c);
   return (
-    <article class="card">
+    <>
+      <div class="phead">
       <div class="ch"><span class="dotc" style={{ background: `var(--${ownerCol(c.owner)})` }} /><h2>{c.name}</h2><span class="tag">{lord}</span></div>
       <div class="stats">
         <div class="stat"><label>People</label><b>{c.pop}</b></div>
         <div class="stat"><label>Defence</label><b>{near ? '~' + estDef(s, c) : '?'}</b><small>{near ? 'scouted' : 'unknown'}</small></div>
         <div class="stat"><label>Fort</label><b>{c.fort}</b><small>of 3</small></div>
       </div>
+      </div>
+      <div class="pbody">
       <div class="chips">
         <span class="chip">Soil<b>{pips(c.f)}</b></span>
         <span class="chip">Timber<b>{pips(c.w)}</b></span>
@@ -142,6 +179,7 @@ export function FoeCounty({ s, c }: { s: GameState; c: County }) {
             : <p class="note">None of your counties border {c.name}. Take a neighbouring county first.</p>}
         </div>
       </div>
-    </article>
+      </div>
+    </>
   );
 }

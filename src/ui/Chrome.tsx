@@ -1,6 +1,7 @@
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { NC, SEASONS, counties, season, type GameState } from '../game';
-import { closeSheet, endTurn, game, setTab, type Tab } from './store';
+import { closeSheet, endTurn, game, setFull, setTab, type Tab } from './store';
 
 const TABS: [Tab, string][] = [['county', 'County'], ['realm', 'Realm'], ['chronicle', 'Chronicle']];
 
@@ -11,6 +12,32 @@ export function Tabs({ tab }: { tab: Tab }) {
         <button key={id} role="tab" aria-selected={id === tab} onClick={() => setTab(id)}>{label}</button>
       ))}
     </nav>
+  );
+}
+
+/** The lower part of the screen: a handle to pull it over the map, the tabs, then the content, which scrolls on its own. */
+export function Panel({ children }: { children: ComponentChildren }) {
+  const full = game.ui.full, y0 = useRef<number | null>(null), body = useRef<HTMLDivElement>(null);
+  const { sel, tab, ctab } = game.ui;
+  useEffect(() => { body.current?.querySelector('.pbody, .card')?.scrollTo?.(0, 0); }, [sel, tab, ctab, full]);
+  const down = (e: PointerEvent) => { y0.current = e.clientY; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); };
+  const up = (e: PointerEvent) => {
+    if (y0.current === null) return;
+    const dy = e.clientY - y0.current;
+    y0.current = null;
+    if (dy < -24) setFull(true);
+    else if (dy > 24) setFull(false);
+    else setFull(!full);
+  };
+  return (
+    <section class={'panel' + (full ? ' full' : '')} ref={body}>
+      <button class="grab" aria-label={full ? 'Show the map' : 'Show more'} aria-expanded={full} onPointerDown={down} onPointerUp={up} onPointerCancel={() => { y0.current = null; }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFull(!full); } }}>
+        <i />
+      </button>
+      <Tabs tab={game.ui.tab} />
+      {children}
+    </section>
   );
 }
 
