@@ -1,23 +1,10 @@
-import { SEASONS, SEASON_NOTE, counties, forecast, lordName, season, threats, year, type GameState } from '../game';
+import { SEASONS, SEASON_NOTE, forecast, season, year, type GameState } from '../game';
+import { attention } from './attention';
 import { signed } from './format';
 import { select } from './store';
 
-interface Warn { key: string; text: string; sel?: number }
-
-/** Things that need you before the season ends: hunger, an empty treasury, unrest, rival armies at the border. */
-function warnings(s: GameState): Warn[] {
-  const st = s.lords[0]!.stock, f = forecast(s, 0), w: Warn[] = [];
-  if (st.grain + f.grain < 0) w.push({ key: 'grain', text: 'Grain runs out: buy grain or farm more' });
-  if (st.gold + f.gold < 0) w.push({ key: 'gold', text: 'Treasury runs dry: soldiers will desert' });
-  for (const c of counties(s, 0)) if (c.mood < 20) w.push({ key: 'u' + c.id, text: `Unrest in ${c.name}`, sel: c.id });
-  for (const t of threats(s).slice(0, 3)) {
-    w.push({ key: 't' + t.to.id, text: `${lordName(s, t.from.owner)} threatens ${t.to.name}`, sel: t.to.id });
-  }
-  return w;
-}
-
 export function Hud({ s }: { s: GameState }) {
-  const se = season(s), st = s.lords[0]!.stock, f = forecast(s, 0), warn = warnings(s);
+  const se = season(s), st = s.lords[0]!.stock, f = forecast(s, 0), warn = attention(s).filter((x) => !x.soft);
   return (
     <header class="hud">
       <div class="hud-top">

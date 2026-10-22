@@ -6,7 +6,8 @@ import {
   setRation, setRationAll, setTax, setTaxAll, setWork, unmuster, KINDS, NB, movable, total, SEASONS, year, season,
   type GameState, type Kind, type Loaded, type Mode, type Rng, type Units, type Work,
 } from '../game';
-import { battleSheet, helpSheet, overSheet, type Sheet } from './sheets';
+import { attention } from './attention';
+import { attentionSheet, battleSheet, helpSheet, overSheet, type Sheet } from './sheets';
 
 export type Tab = 'county' | 'realm' | 'chronicle';
 export type CTab = 'work' | 'policy' | 'troops' | 'orders';
@@ -223,6 +224,10 @@ export function startNewGame(): void {
     pushSheet(helpSheet());
   });
 }
+export const showAttention = (): void => act(() => {
+  const items = attention(game.s);
+  if (items.length) pushSheet(attentionSheet(items, (id) => { closeSheet(); select(id); }));
+});
 export const showHelp = (): void => act(() => { pushSheet(helpSheet()); });
 
 /* ---------- save export and import ---------- */

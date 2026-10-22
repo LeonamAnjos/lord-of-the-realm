@@ -1,7 +1,8 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { NC, SEASONS, counties, season, type GameState } from '../game';
-import { closeSheet, endTurn, game, setFull, setTab, stepCounty, type Tab } from './store';
+import { attention } from './attention';
+import { closeSheet, endTurn, game, setFull, setTab, showAttention, stepCounty, type Tab } from './store';
 
 const TABS: [Tab, string][] = [['county', 'County'], ['realm', 'Realm'], ['chronicle', 'Chronicle']];
 
@@ -54,11 +55,13 @@ export function Panel({ children }: { children: ComponentChildren }) {
 }
 
 export function Dock({ s }: { s: GameState }) {
-  const n = counties(s, 0).length, se = season(s);
+  const n = counties(s, 0).length, se = season(s), todo = s.over ? [] : attention(s), danger = todo.some((w) => !w.soft);
   return (
     <div class="dock">
       <div class="dock-in">
-        <div class="info"><b>{n} of {NC} counties</b>{s.over ? 'The reign is over' : 'Next: ' + SEASONS[(se + 1) % 4]}</div>
+        <div class="info"><b>{n} of {NC} counties</b>{s.over ? 'The reign is over'
+          : todo.length ? <button class={'todo' + (danger ? ' danger' : '')} onClick={showAttention}>{todo.length} to check</button>
+          : 'Next: ' + SEASONS[(se + 1) % 4]}</div>
         <button class="btn primary" disabled={!!s.over} onClick={endTurn}>End {SEASONS[se]!.toLowerCase()}</button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { BattleArt } from './battle';
+import type { Warn } from './attention';
 import { fmtUnits, lordName, type BattleReport, type GameState } from '../game';
 
 export interface Sheet { title: string; body: ComponentChildren; btn: string; cb?: () => void }
@@ -46,6 +47,20 @@ export function overSheet(s: GameState, onNew: () => void): Sheet {
         <p class="big">You hold no county.</p>
         <p>The realm will remember House Thorne, though not kindly.</p>
       </>
+    ),
+  };
+}
+
+/** Everything that needs a look before the season ends; tapping one with a county goes there. */
+export function attentionSheet(items: Warn[], go: (id: number) => void): Sheet {
+  return {
+    title: 'Before you end the season', btn: 'Close',
+    body: (
+      <div class="rows">
+        {items.map((w) => (w.sel === undefined
+          ? <p key={w.key}>{w.text}</p>
+          : <button key={w.key} class="btn" style={{ textAlign: 'left', height: 'auto', padding: '8px 12px' }} onClick={() => go(w.sel!)}>{w.text}</button>))}
+      </div>
     ),
   };
 }

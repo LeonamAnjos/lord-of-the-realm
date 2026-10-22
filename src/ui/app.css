@@ -284,3 +284,7 @@ button.warn { cursor: pointer; }
 .sec-h h3 { margin: 0; }
 .sec-h i { font-style: normal; font-size: 20px; line-height: 1; color: var(--muted); width: 36px; text-align: center; }
 .sec > .sec-h + * { margin-top: 2px; }
+
+/* Dock: things to check before ending the season */
+.todo { font: inherit; font-size: 13.5px; background: none; border: 0; padding: 0; color: var(--warn); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 20px; }
+.todo.danger { color: var(--bad); }
