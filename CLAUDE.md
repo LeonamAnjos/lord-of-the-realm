@@ -7,6 +7,7 @@ All six steps are done: scaffold, pure rules module, tests and simulation, UI, v
 
 ## Layout
 - `src/game/` pure rules, no DOM and no `Math.random` (a seeded RNG is always passed in): `data.ts` constants, `state.ts` new game and accessors, `economy.ts` production/food/mood/population/market/events, `combat.ts` battles/orders/scouting, `actions.ts` player actions, `ai.ts` rivals, `turn.ts` `endSeason`, `save.ts` saves, `bot.ts` a simple player used by tests and simulation.
+- `src/desktop/` the wide-screen layout (window at least 1100x620, or `?ui=desktop`): `DesktopApp.tsx` floating top bar, ledger and season bar; `GlMap.tsx` + `scene3d.ts` a three.js board (lazy-loaded) that reads the same state and calls `tapCounty`. Falls back to the SVG map without WebGL. Reuses the `src/ui/` panels, sheets and store, so rules and saves are shared.
 - `src/ui/` Preact components and `store.ts` (the running game, saving, every button action). CSS in `app.css` carries the legacy look.
 - `scripts/` `simulate.ts` (balance runs), `diff-legacy.ts` + `legacy-harness.ts` (legacy vs port), `make-icons.ts`.
 - `BALANCE_NOTES.md` balance ideas and the spec-vs-legacy differences. **Do not change gameplay numbers while porting or refactoring**; write ideas there.
