@@ -17,11 +17,13 @@
   "dependencies": {
     "@fontsource/alegreya-sans": "^5.3.0",
     "@fontsource/im-fell-english-sc": "^5.3.0",
-    "preact": "^11.0.1"
+    "preact": "^11.0.1",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",
     "@types/node": "^26.6.5",
+    "@types/three": "^0.186.0",
     "rollup": "^4.64.7",
     "sharp": "^0.35.5",
     "tsx": "^4.23.15",
