@@ -369,8 +369,12 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
   /* ---------- camera ---------- */
   const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 300);
   const view = { yaw: reduced ? 0 : -0.6, polar: reduced ? 0.9 : 0.55, zoom: reduced ? 1 : 1.5 };
-  const goal = { yaw: 0, polar: 0.9, zoom: 1 };
-  const look = new THREE.Vector3(0, 0.4, 0.5);
+  const goal = { yaw: 0, polar: 0.9, zoom: 1, px: 0, pz: 0 };
+  const pan = { x: 0, z: 0 };
+  const BASE = new THREE.Vector3(0, 0.4, 0.5);
+  const look = BASE.clone();
+  /** How far the view may slide: nothing when the whole board fits, the whole board when zoomed right in. */
+  const reach = (zoom: number, half: number) => half * THREE.MathUtils.clamp((1.1 - zoom) / 0.6, 0, 1);
   let width = 1, height = 1, inset = 0;
   function layout(): void {
     width = host.clientWidth || 1; height = host.clientHeight || 1;
@@ -390,13 +394,14 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
     const aspect = Math.max(0.5, (width - inset) / height);
     const fit = Math.max(42 / (f * aspect), 22 / f);
     const d = fit * view.zoom;
+    look.set(BASE.x + pan.x, BASE.y, BASE.z + pan.z);
     camera.position.set(look.x + d * Math.sin(view.polar) * Math.sin(view.yaw), look.y + d * Math.cos(view.polar), look.z + d * Math.sin(view.polar) * Math.cos(view.yaw));
     camera.lookAt(look);
   }
 
   /* ---------- pointer ---------- */
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-  let hover = -1, down: { x: number; y: number; yaw: number; polar: number } | null = null, dragged = false;
+  let hover = -1, down: { x: number; y: number; yaw: number; polar: number; px: number; pz: number; orbit: boolean } | null = null, dragged = false;
   function pick(e: PointerEvent): number {
     const r = canvas.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -405,7 +410,7 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
     return hit ? (hit.object.userData['id'] as number) : -1;
   }
   canvas.addEventListener('pointerdown', (e) => {
-    down = { x: e.clientX, y: e.clientY, yaw: goal.yaw, polar: goal.polar }; dragged = false;
+    down = { x: e.clientX, y: e.clientY, yaw: goal.yaw, polar: goal.polar, px: goal.px, pz: goal.pz, orbit: e.button !== 0 || e.shiftKey }; dragged = false;
     canvas.setPointerCapture(e.pointerId);
   });
   canvas.addEventListener('pointermove', (e) => {
@@ -413,8 +418,16 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
       if (dragged || Math.hypot(dx, dy) > 5) {
         dragged = true; canvas.style.cursor = 'grabbing';
-        goal.yaw = THREE.MathUtils.clamp(down.yaw - dx * 0.004, -0.7, 0.7);
-        goal.polar = THREE.MathUtils.clamp(down.polar - dy * 0.004, 0.45, 1.15);
+        if (down.orbit) {
+          goal.yaw = THREE.MathUtils.clamp(down.yaw - dx * 0.004, -0.7, 0.7);
+          goal.polar = THREE.MathUtils.clamp(down.polar - dy * 0.004, 0.45, 1.15);
+        } else {
+          // slide the board under the cursor: one pixel is about this many world units at the camera's distance
+          const k = (2 * camera.position.distanceTo(look) * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / height;
+          const s = Math.sin(view.yaw), c = Math.cos(view.yaw);
+          goal.px = down.px - (dx * c + (dy / Math.max(0.5, Math.cos(view.polar) + 0.35)) * s) * k;
+          goal.pz = down.pz + (dx * s - (dy / Math.max(0.5, Math.cos(view.polar) + 0.35)) * c) * k;
+        }
       }
       return;
     }
@@ -427,8 +440,9 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
     if (!was) { const id = pick(e); if (id >= 0) onPick(id); }
   });
   canvas.addEventListener('pointerleave', () => { hover = -1; });
-  canvas.addEventListener('wheel', (e) => { e.preventDefault(); goal.zoom = THREE.MathUtils.clamp(goal.zoom * Math.exp(e.deltaY * 0.0012), 0.5, 1.2); }, { passive: false });
-  canvas.addEventListener('dblclick', () => { goal.yaw = 0; goal.polar = 0.9; goal.zoom = 1; });
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); goal.zoom = THREE.MathUtils.clamp(goal.zoom * Math.exp(e.deltaY * 0.0012), 0.35, 1.2); }, { passive: false });
+  canvas.addEventListener('dblclick', () => { goal.yaw = 0; goal.polar = 0.9; goal.zoom = 1; goal.px = 0; goal.pz = 0; });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   canvas.style.cursor = 'grab';
 
   /* ---------- state in ---------- */
@@ -463,6 +477,10 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
     view.yaw += (goal.yaw - view.yaw) * (reduced ? 1 : 1 - Math.exp(-dt * 2.6));
     view.polar += (goal.polar - view.polar) * (reduced ? 1 : 1 - Math.exp(-dt * 2.6));
     view.zoom += (goal.zoom - view.zoom) * (reduced ? 1 : 1 - Math.exp(-dt * 3));
+    goal.px = THREE.MathUtils.clamp(goal.px, -reach(goal.zoom, 22), reach(goal.zoom, 22));
+    goal.pz = THREE.MathUtils.clamp(goal.pz, -reach(goal.zoom, 15), reach(goal.zoom, 15));
+    pan.x += (goal.px - pan.x) * (reduced ? 1 : 1 - Math.exp(-dt * 8));
+    pan.z += (goal.pz - pan.z) * (reduced ? 1 : 1 - Math.exp(-dt * 8));
     placeCamera();
 
     grassCol.lerp(seasonTargets.grass, k * 0.6);

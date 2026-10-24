@@ -36,7 +36,9 @@ body.desktop { padding: 0; overflow: hidden; }
 .gl-label.sel .jf, .gl-label.sel .jw, .gl-label.sel .ji, .gl-label.sel .jc { filter: brightness(.55) saturate(1.4); }
 
 /* Top bar */
-.dt-top { position: absolute; z-index: 5; top: var(--gap); left: var(--gap); right: calc(var(--side) + var(--gap) * 2); display: flex; align-items: center; gap: 28px;
+.dt-head { position: absolute; z-index: 5; top: var(--gap); left: var(--gap); right: calc(var(--side) + var(--gap) * 2); display: flex; flex-direction: column; align-items: flex-start; gap: 10px; pointer-events: none; }
+.dt-head > * { pointer-events: auto; }
+.dt-top { align-self: stretch; display: flex; align-items: center; gap: 28px;
   background: var(--glass); border: 1px solid var(--glass-line); border-radius: 14px; padding: 12px 22px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
 .dt h1 { position: static; width: auto; height: auto; clip: auto; margin: 0; font: 400 28px/1 var(--display); letter-spacing: .07em; white-space: nowrap; color: var(--fg); }
 .dt-season { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 150px; padding-left: 26px; border-left: 1px solid var(--glass-line); }
@@ -56,7 +58,7 @@ body.desktop { padding: 0; overflow: hidden; }
 .dt-help { flex: none; width: 36px; height: 36px; border-radius: 50%; background: none; border: 1px solid var(--glass-line); color: var(--muted); font: 700 17px var(--body); cursor: pointer; }
 .dt-help:hover { color: var(--fg); border-color: var(--muted); }
 
-.dt-warns { position: absolute; z-index: 4; top: 104px; left: var(--gap); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 420px; }
+.dt-warns { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 420px; }
 .dt-warns .warn { white-space: normal; text-align: left; backdrop-filter: blur(6px); background: rgba(48, 20, 16, .82); font-size: 13.5px; padding: 4px 12px; }
 
 /* Ledger at the right */
@@ -101,3 +103,4 @@ body.desktop .toast { bottom: 110px; left: calc((100% - var(--side) - 40px) / 2)
 }
 
 @media (max-width: 1360px) { .dt { --side: 420px; } .dt-top { gap: 18px; padding: 10px 16px; } .dt h1 { font-size: 22px; } .dt-res .r b { font-size: 24px; } .dt-res .r i small { display: none; } }
+@media (max-width: 1360px) { .dt-res { gap: 8px; } .dt-res .r { padding-left: 10px; } .dt-res .r i { display: block; margin-left: 0; } .dt-season { min-width: 0; padding-left: 16px; } .dt-season small { display: none; } .dt-top { gap: 14px; } }

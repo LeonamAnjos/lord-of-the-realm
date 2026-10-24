@@ -85,8 +85,7 @@ export function DesktopApp() {
     <div class={'dt' + (g.fade ? ' fade-' + g.fade : '')}>
       <GlMap s={s} sel={ui.sel} />
       <div class="dt-vignette" aria-hidden="true" />
-      <Top s={s} />
-      <Warns s={s} />
+      <div class="dt-head"><Top s={s} /><Warns s={s} /></div>
       <aside class="dt-side">
         <section class="panel dt-panel">
           <Tabs tab={ui.tab} />
