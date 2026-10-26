@@ -1,8 +1,10 @@
-import { KINDS, NB, NC, NEUTRAL, NORMAL_RATION, NORMAL_TAX, U } from './data';
+import { KINDS, NB, NC, NEUTRAL, NORMAL_RATION, NORMAL_TAX, RULES, U } from './data';
 import { applyFarmLimit } from './economy';
 import { range, type Rng } from './rng';
-import { atkOf, clamp, counties, defaultWork, defence, logEv, lordName, movable, total, troops, zero } from './state';
+import { atkMult, atkOf, clamp, counties, defaultWork, defence, logEv, lordName, movable, total, troops, zero } from './state';
 import type { BattleReport, County, GameState, Mode, SendResult, Units } from './types';
+
+const B = RULES.battle;
 
 /** Take `p[k]` percent of each troop type from `m`, rounded up (never more than `m[k]`). */
 export function splitUnits(m: Units, p: Units): Units {
@@ -33,15 +35,15 @@ function applyLoss(g: Units, cf: number, lost: Units): Units {
 
 /** Resolve an attack of troops `m` from `from` against `to`. Mutates both counties. */
 export function battle(s: GameState, rng: Rng, from: County, to: County, m: Units): BattleReport {
-  const atk = atkOf(m) * range(rng, 0.9, 1.1);
-  const def = defence(to) * range(rng, 0.9, 1.1);
+  const atk = atkOf(m) * atkMult(s) * range(rng, B.rollLow, B.rollHigh);
+  const def = defence(to) * range(rng, B.rollLow, B.rollHigh);
   const rep: BattleReport = {
     from: from.name, to: to.name, att: from.owner, dfn: to.owner,
     atk: Math.round(atk), def: Math.round(def), won: atk > def,
     sent: m, lostA: zero(), lostD: zero(), turn: s.turn,
   };
   if (atk > def) {
-    const surv = applyLoss(m, clamp((0.8 * def) / atk, 0.1, 0.8), rep.lostA);
+    const surv = applyLoss(m, clamp((B.lossFactor * def) / atk, B.lossMin, B.lossMax), rep.lostA);
     if (total(surv) === 0) {
       const big = KINDS.slice().sort((a, b) => m[b] - m[a])[0]!;
       surv[big] = 1;
@@ -50,14 +52,14 @@ export function battle(s: GameState, rng: Rng, from: County, to: County, m: Unit
     for (const k of KINDS) rep.lostD[k] = to.g[k];
     to.mus = zero(); to.tax = NORMAL_TAX; to.ration = NORMAL_RATION; to.owner = from.owner;
     to.g = surv; to.arr = { spear: surv.spear, archer: surv.archer, knight: surv.knight };
-    to.pop = Math.max(30, Math.round(to.pop * 0.85)); to.mood = 25; to.fort = Math.max(0, to.fort - 1);
+    to.pop = Math.max(B.conqueredPopMin, Math.round(to.pop * B.conqueredPopKeeps)); to.mood = B.conqueredMood; to.fort = Math.max(0, to.fort - B.conqueredFortLoss);
     to.work = defaultWork(to.i);
-    to.farmPref = 45;
+    to.farmPref = RULES.start.work.farm;
     applyFarmLimit(s, to);
   } else {
-    to.g = applyLoss(to.g, clamp((0.8 * atk) / def, 0.1, 0.8), rep.lostD);
+    to.g = applyLoss(to.g, clamp((B.lossFactor * atk) / def, B.lossMin, B.lossMax), rep.lostD);
     for (const k of KINDS) {
-      const back = Math.floor(m[k] * 0.1);
+      const back = Math.floor(m[k] * B.loserKeeps);
       from.g[k] += back; from.arr[k] += back;
       rep.lostA[k] = m[k] - back;
     }
@@ -111,11 +113,30 @@ export function doSend(s: GameState, rng: Rng, from: County, to: County, mode: M
     if (from.owner === 0) logEv(s, `Marched ${fmtUnits(m)} from ${from.name} to ${to.name}.`);
     return { kind: 'move', m };
   }
-  const report = battle(s, rng, from, to, m);
+  return { kind: 'battle', report: settle(s, battle(s, rng, from, to, m), pending) };
+}
+
+/** Log a finished battle, update the tallies and retire beaten lords. */
+function settle(s: GameState, report: BattleReport, pending?: BattleReport[]): BattleReport {
   logEv(s, battleLog(s, report), report.att === 0 ? (report.won ? 'good' : 'bad') : report.dfn === 0 ? (report.won ? 'bad' : 'good') : '');
+  if (s.stats && report.won) {
+    if (report.att === 0) s.stats.taken++;
+    if (report.dfn === 0) s.stats.lost++;
+  }
   checkElim(s);
   if (report.dfn === 0 && report.att !== 0 && pending) pending.push(report);
-  return { kind: 'battle', report };
+  return report;
+}
+
+/** Several of one lord's counties strike the same target as one army. The first county leads: survivors of a failed attack walk back to it. */
+export function doSendMany(s: GameState, rng: Rng, from: County[], to: County, mode: Mode, pending?: BattleReport[]): BattleReport | null {
+  const m = zero();
+  for (const c of from) {
+    const part = pick(movable(c), mode);
+    for (const k of KINDS) { c.g[k] -= part[k]; m[k] += part[k]; }
+  }
+  if (!total(m)) return null;
+  return settle(s, battle(s, rng, from[0]!, to, m), pending);
 }
 
 /* ---------- Scouting (deterministic, no RNG) ---------- */
@@ -136,7 +157,7 @@ export function threats(s: GameState, min = 1.2): Threat[] {
     for (const n of NB[to.id]!) {
       const from = s.C[n]!;
       if (from.owner <= 0) continue;
-      const ratio = (atkOf(from.g) * (1 + estNoise(s, from))) / def;
+      const ratio = (atkOf(from.g) * atkMult(s) * (1 + estNoise(s, from))) / def;
       if (ratio >= min && ratio > (best.get(to.id)?.ratio ?? 0)) best.set(to.id, { from, to, ratio });
     }
   }

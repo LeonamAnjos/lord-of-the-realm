@@ -1,21 +1,23 @@
-import { BASE, FARM_LIMIT, FARM_MULT, GRAIN_SEASON, KINDS, RATION, SEASONS, TAX, WOOD_MULT } from './data';
+import { BASE, FARM_LIMIT, RULES, FARM_MULT, GRAIN_SEASON, KINDS, RATION, SEASONS, TAX, WOOD_MULT } from './data';
 import { type Rng, index, range } from './rng';
 import { capOf, clamp, counties, idlePct, logEv, season, troops, upkeep, zero } from './state';
 import type { County, GameState, Stock } from './types';
 
+const P = RULES.production, M = RULES.mood, POP = RULES.population, FAM = RULES.famine, MK = RULES.market, EV = RULES.events;
+
 /** Per-season production of one county in season `s`. */
 export function prod(c: County, s: number) {
-  const f = 0.6 + (0.4 * c.mood) / 100;
+  const f = P.moodFloor + (P.moodRange * c.mood) / 100;
   return {
-    grain: ((c.pop * c.work.farm) / 100) * 1.3 * c.f * FARM_MULT[s]! * f,
+    grain: ((c.pop * c.work.farm) / 100) * P.grainPerFarmer * c.f * FARM_MULT[s]! * f,
     wood: ((c.pop * c.work.wood) / 100) * c.w * WOOD_MULT[s]! * f,
-    iron: ((c.pop * c.work.mine) / 100) * 0.7 * c.i * f,
+    iron: ((c.pop * c.work.mine) / 100) * P.ironPerMiner * c.i * f,
   };
 }
 
 /** Grain eaten in a season, soldiers included. */
 export const eat = (c: County): number => (c.pop + troops(c)) * RATION[c.ration]!.a;
-export const craft = (c: County): number => ((c.pop * idlePct(c)) / 100) * 0.15;
+export const craft = (c: County): number => ((c.pop * idlePct(c)) / 100) * P.craftGoldPerPerson;
 export const taxGold = (c: County): number => c.pop * TAX[c.tax]!.g;
 
 /** Will this lord's stock plus this season's harvest cover everyone's meals? */
@@ -28,24 +30,24 @@ export function realmFed(s: GameState, lord = 0): boolean {
 
 /** Mood change this season (after the 0 to 100 clamp), assuming the lord's fed check as it stands now. */
 export function moodDelta(s: GameState, c: County): number {
-  const d = TAX[c.tax]!.m + (realmFed(s, 0) ? 2 + RATION[c.ration]!.m : -15);
-  return clamp(c.mood + d, 0, 100) - c.mood;
+  const d = TAX[c.tax]!.m + (realmFed(s, 0) ? M.fed + RATION[c.ration]!.m : M.famine);
+  return clamp(c.mood + d, M.min, M.max) - c.mood;
 }
 
 /** Expected change in people this season at a given mood (a real number; the game carries the fraction forward). */
 export function popRate(c: County, mood: number, fed: boolean): number {
-  mood = clamp(mood, 0, 100);
+  mood = clamp(mood, M.min, M.max);
   const cap = capOf(c);
   let d = 0;
-  if (fed && c.pop < cap) d += c.pop * 0.12 * clamp((mood - 40) / 30, 0, 1.5) * (1 - c.pop / cap);
-  if (mood < 40) d -= c.pop * (40 - mood) * 0.00075;
-  if (mood < 20) d -= c.pop * 0.03;
+  if (fed && c.pop < cap) d += c.pop * POP.growthRate * clamp((mood - POP.growthStartsAtMood) / POP.growthFullSpeedSpan, 0, POP.growthMaxMultiplier) * (1 - c.pop / cap);
+  if (mood < POP.unhappyBelowMood) d -= c.pop * (POP.unhappyBelowMood - mood) * POP.unhappyLossPerPoint;
+  if (mood < POP.rebelBelowMood) d -= c.pop * POP.rebelLoss;
   return d;
 }
 
 /** Most people the fields can use in a season. Better soil supports more. */
 export function farmLimit(c: County, s: number): number {
-  return Math.min(100, Math.floor((FARM_LIMIT[s]! * (0.6 + 0.4 * c.f)) / 5) * 5);
+  return Math.min(100, Math.floor((FARM_LIMIT[s]! * (P.farmLimitSoilFloor + P.farmLimitSoilRange * c.f)) / P.farmLimitStep) * P.farmLimitStep);
 }
 
 /** Clamp farming to the limit (restoring the chosen `farmPref` when allowed). Returns how many people moved to crafts. */
@@ -107,19 +109,19 @@ export function economyTick(s: GameState): void {
     let unpaid = false;
     if (L.stock.gold < 0) { L.stock.gold = 0; unpaid = true; }
     for (const c of cs) {
-      c.mood += TAX[c.tax]!.m + (fed ? 2 + RATION[c.ration]!.m : -15);
+      c.mood += TAX[c.tax]!.m + (fed ? M.fed + RATION[c.ration]!.m : M.famine);
       if (!fed) {
-        c.pop = Math.max(20, Math.round(c.pop * (1 - 0.12 * (1 - ratio) - 0.02)));
-        for (const k of KINDS) c.g[k] -= Math.round(c.g[k] * 0.1 * (1 - ratio));
+        c.pop = Math.max(POP.min, Math.round(c.pop * (1 - FAM.popLossPerShortfall * (1 - ratio) - FAM.popLossFlat)));
+        for (const k of KINDS) c.g[k] -= Math.round(c.g[k] * FAM.troopLossPerShortfall * (1 - ratio));
       }
       /* Mood sets the pace: growth rises from nothing at 40 to full speed at 70 and 1.5x at 100; below 40 people drift away. */
       c.pf = (c.pf || 0) + popRate(c, c.mood, fed);
       const whole = c.pf >= 0 ? Math.floor(c.pf) : Math.ceil(c.pf);
       c.pf -= whole;
-      c.pop = Math.max(20, c.pop + whole);
-      if (c.mood < 20 && l === 0) logEv(s, `Unrest in ${c.name}: people are leaving.`, 'bad');
-      if (unpaid) for (const k of KINDS) c.g[k] -= Math.round(c.g[k] * 0.2);
-      c.mood = clamp(c.mood, 0, 100);
+      c.pop = Math.max(POP.min, c.pop + whole);
+      if (c.mood < POP.rebelBelowMood && l === 0) logEv(s, `Unrest in ${c.name}: people are leaving.`, 'bad');
+      if (unpaid) for (const k of KINDS) c.g[k] -= Math.round(c.g[k] * FAM.unpaidDesertion);
+      c.mood = clamp(c.mood, M.min, M.max);
       c.arr = zero();
       c.mus = zero();
     }
@@ -134,8 +136,8 @@ export function economyTick(s: GameState): void {
 
 export function marketDrift(s: GameState, rng: Rng): void {
   for (const k of ['grain', 'wood', 'iron'] as const) {
-    const m = s.market[k] * (1 + (rng() - 0.5) * 0.3);
-    s.market[k] = clamp(m + (1 - m) * 0.1, 0.6, 1.6);
+    const m = s.market[k] * (1 + (rng() - 0.5) * MK.driftSize);
+    s.market[k] = clamp(m + (1 - m) * MK.pullBack, MK.min, MK.max);
   }
 }
 
@@ -143,21 +145,21 @@ export function marketDrift(s: GameState, rng: Rng): void {
 export function marketPrice(s: GameState, k: 'grain' | 'wood' | 'iron'): number {
   return BASE[k] * s.market[k] * (k === 'grain' ? GRAIN_SEASON[season(s)]! : 1);
 }
-export const buyCost = (s: GameState, k: 'grain' | 'wood' | 'iron'): number => Math.ceil(marketPrice(s, k) * 1.15 * 10);
-export const sellGain = (s: GameState, k: 'grain' | 'wood' | 'iron'): number => Math.floor(marketPrice(s, k) * 0.85 * 10);
+export const buyCost = (s: GameState, k: 'grain' | 'wood' | 'iron'): number => Math.ceil(marketPrice(s, k) * MK.buyMultiplier * MK.lot);
+export const sellGain = (s: GameState, k: 'grain' | 'wood' | 'iron'): number => Math.floor(marketPrice(s, k) * MK.sellMultiplier * MK.lot);
 
-/** Buy a lot of 10. */
+/** Buy one lot (10 by default). */
 export function buy(s: GameState, k: 'grain' | 'wood' | 'iron'): boolean {
   const st = s.lords[0]!.stock, cost = buyCost(s, k);
   if (st.gold < cost) return false;
-  st.gold -= cost; st[k] += 10;
+  st.gold -= cost; st[k] += MK.lot;
   return true;
 }
-/** Sell a lot of 10. */
+/** Sell one lot (10 by default). */
 export function sell(s: GameState, k: 'grain' | 'wood' | 'iron'): boolean {
   const st = s.lords[0]!.stock, gain = sellGain(s, k);
-  if (st[k] < 10) return false;
-  st[k] -= 10; st.gold += gain;
+  if (st[k] < MK.lot) return false;
+  st[k] -= MK.lot; st.gold += gain;
   return true;
 }
 
@@ -165,26 +167,26 @@ export function sell(s: GameState, k: 'grain' | 'wood' | 'iron'): boolean {
 
 /** 25% a season, on one of your counties: plague, bumper yield, bandits or a merchant caravan. */
 export function rollEvent(s: GameState, rng: Rng): void {
-  if (rng() > 0.25) return;
+  if (rng() > EV.chance) return;
   const mine = counties(s, 0);
   if (!mine.length) return;
   const c = mine[index(rng, mine.length)]!;
   const st = s.lords[0]!.stock;
   const r = rng();
-  if (r < 0.25 && c.pop > 60) {
-    const loss = Math.round(c.pop * 0.12);
+  if (r < 0.25 && c.pop > EV.plague.onlyAbovePeople) {
+    const loss = Math.round(c.pop * EV.plague.share);
     c.pop -= loss;
     logEv(s, `Plague in ${c.name}: ${loss} villagers died.`, 'bad');
   } else if (r < 0.5) {
-    const g = Math.round(range(rng, 30, 70));
+    const g = Math.round(range(rng, EV.bumper.min, EV.bumper.max));
     st.grain += g;
     logEv(s, `A bountiful yield in ${c.name}: +${g} grain.`, 'good');
   } else if (r < 0.75) {
-    const m = Math.min(Math.round(st.gold * 0.12), 60);
+    const m = Math.min(Math.round(st.gold * EV.bandits.share), EV.bandits.max);
     st.gold -= m;
     logEv(s, `Bandits raid ${c.name} and carry off ${m} gold.`, 'bad');
   } else {
-    const t = Math.round(range(rng, 25, 55));
+    const t = Math.round(range(rng, EV.caravan.min, EV.caravan.max));
     st.gold += t;
     logEv(s, `A merchant caravan pays ${t} gold in tolls at ${c.name}.`, 'good');
   }

@@ -3,14 +3,17 @@
 import { useEffect, useState } from 'preact/hooks';
 import {
   SAVE_KEY, buildFort, buy, exportText, importText, clamp, createRng, endSeason, fmtUnits, newGame, parseSave, playerSend, recruit, sell, serialize,
-  setRation, setRationAll, setTax, setTaxAll, setWork, unmuster, KINDS, NB, movable, total, SEASONS, year, season,
-  type GameState, type Kind, type Loaded, type Mode, type Rng, type Units, type Work,
+  setRation, setTax, setWork, unmuster, KINDS, NB, movable, total, SEASONS, year, season,
+  type GameState, type Kind, type Level, type Loaded, type Mode, type Rng, type Units, type Work,
 } from '../game';
-import { attention } from './attention';
+import { attention, countyFlags } from './attention';
 import { attentionSheet, battleSheet, helpSheet, overSheet, type Sheet } from './sheets';
 
 export type Tab = 'county' | 'realm' | 'chronicle';
 export type CTab = 'work' | 'policy' | 'troops' | 'orders';
+/** Which counties the list shows: yours, yours with a warning, yours at a border, or everyone else's. */
+export type View = 'mine' | 'warn' | 'border' | 'rivals';
+export type Sort = 'map' | 'name' | 'mood' | 'army' | 'pop';
 
 export interface Ui {
   sel: number;
@@ -19,8 +22,21 @@ export interface Ui {
   help: boolean;
   /** "start over?" question is open */
   confirm: boolean;
-  /** which part of your county the panel shows */
+  /** which part of a rival county the ?inspect view shows */
   ctab: CTab;
+  /** county cards that are open in the list, and the part each one shows */
+  open: number[];
+  ctabs: Record<number, CTab>;
+  view: View;
+  sort: Sort;
+  /** county under the pointer in the list, outlined on the map without selecting it */
+  hover: number | null;
+  /** scroll the list to this county's card once */
+  scrollTo: number | null;
+  /** chronicle lines written while the last season ended, shown above the list until closed */
+  recap: { t: number; lines: { k: string; txt: string }[] } | null;
+  /** ?inspect: the rival county shown in place of the list */
+  inspect: number | null;
   /** the quick attack popup on the map: from your county to a neighbour */
   quick: { from: number; to: number } | null;
   /** the panel is pulled up over the map */
@@ -29,6 +45,10 @@ export interface Ui {
   wild: number;
   /** the next reign starts with one random county for every lord */
   oneEach: boolean;
+  /** the next reign uses the living realm rules */
+  rich: boolean;
+  /** how hard the rivals play in the next reign */
+  level: Level;
   /** open split dialogs, by "from-to" */
   split: Record<string, Units>;
   /** the save box in the Realm tab */
@@ -48,7 +68,7 @@ export const game = {
   fold: loadFolds(),
   s: undefined as unknown as GameState,
   rng: undefined as unknown as Rng,
-  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, ctab: 'work', full: false, quick: null, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
+  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, rich: false, level: 'normal', ctab: 'work', open: [], ctabs: {}, view: 'mine', sort: 'map', hover: null, scrollTo: null, recap: null, inspect: null, full: false, quick: null, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
   sheets: [] as Sheet[],
   toast: null as string | null,
   /** the board fades out while a season ends, then back in with the new one */
@@ -80,7 +100,7 @@ const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0]!;
 
 function begin(seed: number): void {
   game.rng = createRng(seed);
-  game.s = newGame(game.rng, seed, { unclaimed: game.ui.wild, oneEach: game.ui.oneEach });
+  game.s = newGame(game.rng, seed, { unclaimed: game.ui.wild, oneEach: game.ui.oneEach, rich: game.ui.rich, level: game.ui.level });
   game.ui.quick = null;
 }
 
@@ -109,21 +129,56 @@ export function boot(): void {
     game.ui.sel = typeof u.sel === 'number' ? u.sel : 4;
     game.ui.tab = u.tab === 'realm' || u.tab === 'chronicle' ? u.tab : 'county';
     game.ui.help = !!u.help;
+    game.ui.rich = !!loaded.state.rich; game.ui.level = loaded.state.level ?? 'normal';
   } else {
     begin(randomSeed());
   }
+  game.ui.open = [game.ui.sel]; game.ui.scrollTo = game.ui.sel;
   if (!game.ui.help) { game.ui.help = true; pushSheet(helpSheet()); }
   if (game.s.over) pushSheet(overSheet(game.s, startNewGame));
   persist();
 }
 
 /* ---------- actions ---------- */
-export const select = (id: number): void => act(() => { game.ui.sel = id; game.ui.tab = 'county'; game.ui.quick = null; });
+/** Which counties a list view holds. */
+export function inView(s: GameState, v: View, id: number): boolean {
+  const c = s.C[id]!;
+  if (v === 'rivals') return c.owner !== 0;
+  if (c.owner !== 0) return false;
+  if (v === 'border') return NB[id]!.some((n) => s.C[n]!.owner !== 0);
+  if (v === 'warn') return countyFlags(s, c).some((f) => f.tone === 'bad' || f.tone === 'warn');
+  return true;
+}
+/** Make a county the selected one: open its card, show it in the list and scroll to it. */
+function focus(id: number): void {
+  const u = game.ui;
+  u.sel = id; u.tab = 'county'; u.quick = null; u.inspect = null;
+  if (!u.open.includes(id)) u.open.push(id);
+  if (!inView(game.s, u.view, id)) u.view = game.s.C[id]!.owner === 0 ? 'mine' : 'rivals';
+  u.scrollTo = id;
+}
+export const select = (id: number): void => act(() => focus(id));
+/** Tap a card's heading: open it and make it the selected county, or fold it away. */
+export const toggleCard = (id: number): void => act(() => {
+  const u = game.ui, i = u.open.indexOf(id);
+  if (i >= 0) u.open.splice(i, 1);
+  else { u.open.push(id); u.sel = id; u.quick = null; }
+});
+export const openAll = (ids: number[]): void => act(() => { game.ui.open = [...new Set([...game.ui.open, ...ids])]; });
+export const closeAll = (): void => act(() => { game.ui.open = []; });
+export const setView = (v: View): void => act(() => { game.ui.view = v; });
+export const setSort = (v: Sort): void => act(() => { game.ui.sort = v; });
+export const setCardTab = (id: number, t: CTab): void => act(() => { game.ui.ctabs[id] = t; game.ui.sel = id; });
+/** Hovering is not saved and changes nothing in the game, so it only redraws. */
+export const setHover = (id: number | null): void => { if (game.ui.hover !== id) { game.ui.hover = id; emit(); } };
+export const scrolled = (): void => { game.ui.scrollTo = null; };
+export const closeRecap = (): void => act(() => { game.ui.recap = null; });
+export const inspect = (id: number | null): void => act(() => { game.ui.inspect = id; });
 /** Tap a county on the map: a neighbour you could march on opens the quick attack popup, anything else is selected. */
 export const tapCounty = (id: number): void => {
   const from = game.s.C[game.ui.sel], to = game.s.C[id];
   if (from && to && from.owner === 0 && to.owner !== 0 && NB[from.id]!.includes(id) && total(movable(from)) > 0 && !game.s.over) act(() => { game.ui.quick = { from: from.id, to: id }; });
-  else select(id);
+  else act(() => focus(id));
 };
 export const closeQuick = (): void => act(() => { game.ui.quick = null; });
 export const toggleFold = (id: string, shut: boolean): void => {
@@ -134,28 +189,21 @@ export const toggleFold = (id: string, shut: boolean): void => {
 export const setCtab = (t: CTab): void => act(() => { game.ui.ctab = t; });
 export const setFull = (v: boolean): void => act(() => { game.ui.full = v; });
 export const setTab = (tab: Tab): void => act(() => { game.ui.tab = tab; game.ui.confirm = false; });
-const sel = () => game.s.C[game.ui.sel]!;
+const at = (id: number) => game.s.C[id]!;
 
-export const adjustWork = (k: keyof Work, d: number): void => act(() => { setWork(game.s, sel(), k, d); });
-export const muster = (k: Kind, n: number): void => act(() => {
-  if (!recruit(game.s, sel(), k, n)) toast('Cannot muster: check gold, wood, iron and the people left.');
+export const adjustWork = (id: number, k: keyof Work, d: number): void => act(() => { setWork(game.s, at(id), k, d); });
+export const muster = (id: number, k: Kind, n: number): void => act(() => {
+  if (!recruit(game.s, at(id), k, n)) toast('Cannot muster: check gold, wood, iron and the people left.');
 });
-export const undo = (k: Kind, n: number): void => act(() => {
-  if (!unmuster(game.s, sel(), k, n)) toast('Nothing to undo. Only troops you mustered in this county this season can be taken back.');
+export const undo = (id: number, k: Kind, n: number): void => act(() => {
+  if (!unmuster(game.s, at(id), k, n)) toast('Nothing to undo. Only troops you mustered in this county this season can be taken back.');
 });
-export const fort = (): void => act(() => { buildFort(game.s, sel()); });
-export const tax = (v: number): void => act(() => { setTax(sel(), v); });
-export const ration = (v: number): void => act(() => { setRation(sel(), v); });
-export const rationAll = (v: number): void => act(() => { setRationAll(game.s, v); });
-/** Go to your next (1) or previous (-1) county, wrapping round. Does nothing unless a county of yours is selected. */
-export const stepCounty = (dir: 1 | -1): void => act(() => {
-  const mine = game.s.C.filter((c) => c.owner === 0);
-  const i = mine.findIndex((c) => c.id === game.ui.sel);
-  if (i < 0 || mine.length < 2) return;
-  game.ui.sel = mine[(i + dir + mine.length) % mine.length]!.id;
-  game.ui.tab = 'county'; game.ui.quick = null;
-});
-export const taxAll = (v: number): void => act(() => { setTaxAll(game.s, v); });
+export const fort = (id: number): void => act(() => { buildFort(game.s, at(id)); });
+export const tax = (id: number, v: number): void => act(() => { setTax(at(id), v); });
+export const ration = (id: number, v: number): void => act(() => { setRation(at(id), v); });
+/** Set one tax rate or ration in several of your counties at once. */
+export const taxSome = (ids: number[], v: number): void => act(() => { for (const id of ids) if (at(id).owner === 0) setTax(at(id), v); });
+export const rationSome = (ids: number[], v: number): void => act(() => { for (const id of ids) if (at(id).owner === 0) setRation(at(id), v); });
 export const buyLot = (k: 'grain' | 'wood' | 'iron'): void => act(() => { buy(game.s, k); });
 export const sellLot = (k: 'grain' | 'wood' | 'iron'): void => act(() => { sell(game.s, k); });
 
@@ -190,8 +238,11 @@ export const sendSplit = (key: string, fromId: number, toId: number): void => ac
 
 function runEndTurn(): void {
   game.ui.quick = null;
+  const before = game.s.log.length, t = game.s.turn;
   const res = endSeason(game.s, game.rng);
   if (!res) return;
+  const lines = game.s.log.slice(before).map((e) => ({ k: e.k, txt: e.txt }));
+  game.ui.recap = lines.length ? { t, lines } : null;
   for (const b of res.battles) pushSheet(battleSheet(game.s, b));
   if (game.s.over) pushSheet(overSheet(game.s, startNewGame));
   else if (!res.battles.length) {
@@ -214,12 +265,15 @@ export const endTurn = (): void => {
 
 export const askNew = (): void => act(() => { game.ui.confirm = true; });
 export const setOneEach = (v: boolean): void => act(() => { game.ui.oneEach = v; });
+export const setRich = (v: boolean): void => act(() => { game.ui.rich = v; });
+export const setLevel = (v: Level): void => act(() => { game.ui.level = v; });
 export const setWild = (n: number): void => act(() => { game.ui.wild = n; });
 export const cancelNew = (): void => act(() => { game.ui.confirm = false; });
 export function startNewGame(): void {
   act(() => {
     begin(randomSeed());
     game.ui.sel = game.s.C.find((c) => c.owner === 0)!.id; game.ui.tab = 'county'; game.ui.confirm = false; game.ui.split = {}; game.ui.help = true;
+    game.ui.open = [game.ui.sel]; game.ui.view = 'mine'; game.ui.recap = null; game.ui.scrollTo = game.ui.sel;
     game.sheets = [];
     pushSheet(helpSheet());
   });
@@ -251,6 +305,7 @@ export const applyImport = (): void => act(() => {
   const u = loaded.ui;
   game.ui.sel = typeof u.sel === 'number' ? u.sel : 4;
   game.ui.tab = 'county'; game.ui.confirm = false; game.ui.split = {}; game.ui.help = true;
+  game.ui.open = [game.ui.sel]; game.ui.view = 'mine'; game.ui.recap = null; game.ui.scrollTo = game.ui.sel;
   game.sheets = [];
   game.ui.saveBox = { mode: 'closed', text: '', error: null, pending: null };
   if (game.s.over) pushSheet(overSheet(game.s, startNewGame));

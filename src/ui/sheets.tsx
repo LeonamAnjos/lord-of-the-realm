@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { BattleArt } from './battle';
 import type { Warn } from './attention';
-import { fmtUnits, lordName, type BattleReport, type GameState } from '../game';
+import { fmtUnits, goalRows, lordName, type BattleReport, type GameState } from '../game';
 
 export interface Sheet { title: string; body: ComponentChildren; btn: string; cb?: () => void }
 
@@ -28,6 +28,18 @@ export function battleSheet(s: GameState, rep: BattleReport): Sheet {
   };
 }
 
+/** Living realm: what the reign came to. */
+function Recap({ s }: { s: GameState }) {
+  if (!s.rich || !s.stats) return null;
+  const goals = goalRows(s), done = goals.filter((g) => g.state === 'done').length;
+  return (
+    <ul>
+      <li>Counties taken: {s.stats.taken}. Lost to rivals: {s.stats.lost}.</li>
+      <li>Goals reached: {done} of {goals.length}.</li>
+    </ul>
+  );
+}
+
 export function overSheet(s: GameState, onNew: () => void): Sheet {
   if (s.over === 'won') {
     return {
@@ -36,6 +48,7 @@ export function overSheet(s: GameState, onNew: () => void): Sheet {
         <>
           <p class="big">All twelve counties kneel to House Thorne.</p>
           <p>You took the realm in {s.turn} seasons, {Math.floor(s.turn / 4)} years and {s.turn % 4} seasons.</p>
+          <Recap s={s} />
         </>
       ),
     };
@@ -46,6 +59,7 @@ export function overSheet(s: GameState, onNew: () => void): Sheet {
       <>
         <p class="big">You hold no county.</p>
         <p>The realm will remember House Thorne, though not kindly.</p>
+        <Recap s={s} />
       </>
     ),
   };
@@ -72,7 +86,7 @@ export function helpSheet(): Sheet {
       <ul>
         <li>Tap a county. Set how many people farm, cut wood or mine. Farms pay off at harvest in autumn and give nothing in winter, so stockpile grain.</li>
         <li>Tax brings gold but unhappy people work less and leave. Watch the mood bar.</li>
-        <li>Muster troops in the county panel. Spearmen defend, archers and knights attack. Troops that were mustered or moved this season march next season.</li>
+        <li>Muster troops in a county's card (Counties tab, Troops). Spearmen defend, archers and knights attack. Troops that were mustered or moved this season march next season.</li>
         <li>Send troops from the Orders list. Tap Split to choose 10% to 100% of each troop type, then send them in one tap. Win battles to take counties. Hold all twelve to be crowned.</li>
         <li>The fields can only use so many farmers in each season. Extra farmers move to the crafts and earn gold. The numbers on your tiles are the share of people farming, cutting wood, mining and in crafts.</li>
       </ul>

@@ -1,4 +1,4 @@
-import { NEUTRAL, atkOf, estDef, movable, pick, total, type GameState } from '../game';
+import { NEUTRAL, atkMult, atkOf, estDef, movable, pick, total, type GameState } from '../game';
 import { oddsCls } from './format';
 import { closeQuick, game, select, sendOrder } from './store';
 
@@ -21,7 +21,7 @@ export function Quick({ s }: { s: GameState }) {
       </div>
       <div class="go">
         {MODES.map(([mode, label]) => {
-          const sent = pick(m, mode), a = atkOf(sent), n = total(sent);
+          const sent = pick(m, mode), a = Math.round(atkOf(sent) * atkMult(s)), n = total(sent);
           return (
             <button key={mode} class={'btn sm ' + (n ? oddsCls(a, d) : '')} disabled={!n} onClick={() => sendOrder(from.id, to.id, mode)}>{label} · {a}</button>
           );

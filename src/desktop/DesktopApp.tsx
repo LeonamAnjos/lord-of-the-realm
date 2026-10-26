@@ -1,9 +1,9 @@
 import './desktop.css';
 import { NC, SEASONS, SEASON_NOTE, counties, forecast, season, year, NEUTRAL, type GameState } from '../game';
 import { attention } from '../ui/attention';
-import { SheetView, Tabs, Toast } from '../ui/Chrome';
+import { LastEntry, SheetView, Tabs, Toast } from '../ui/Chrome';
 import { Chronicle } from '../ui/Chronicle';
-import { FoeCounty, OwnCounty } from '../ui/CountyPanel';
+import { CountyList } from '../ui/CountyList';
 import { LORD_COL, ownerCol, signed } from '../ui/format';
 import { Quick } from '../ui/Quick';
 import { RealmPanel } from '../ui/RealmPanel';
@@ -67,6 +67,7 @@ function Bar({ s }: { s: GameState }) {
           ))}
           {counties(s, NEUTRAL).length > 0 && <span><i style={{ background: 'var(--o-1)' }} />No lord {counties(s, NEUTRAL).length}</span>}
         </div>
+        <LastEntry s={s} />
       </div>
       {todo.length > 0 && <button class={'todo' + (danger ? ' danger' : '')} onClick={showAttention}>{todo.length} to check</button>}
       <button class="btn primary dt-end" disabled={!!s.over} onClick={endTurn}>
@@ -80,7 +81,6 @@ function Bar({ s }: { s: GameState }) {
 export function DesktopApp() {
   const g = useGame();
   const { s, ui } = g;
-  const c = s.C[ui.sel]!;
   return (
     <div class={'dt' + (g.fade ? ' fade-' + g.fade : '')}>
       <GlMap s={s} sel={ui.sel} />
@@ -91,7 +91,7 @@ export function DesktopApp() {
           <Tabs tab={ui.tab} />
           {ui.tab === 'realm' ? <div class="pbody"><RealmPanel s={s} /></div>
             : ui.tab === 'chronicle' ? <div class="pbody"><Chronicle s={s} /></div>
-              : c.owner === 0 ? <OwnCounty s={s} c={c} /> : <FoeCounty s={s} c={c} />}
+              : <CountyList s={s} />}
         </section>
       </aside>
       <div class="dt-quick"><Quick s={s} /></div>

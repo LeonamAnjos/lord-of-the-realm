@@ -1,9 +1,9 @@
 // Headless balance simulation: plays many seeded games with a simple bot as the player and prints the outcome mix.
-// Run: npm run simulate -- [--games 500] [--turns 200] [--seed 1] [--attack 1.5] [--reserve 60] [--garrison 40] [--sweep] [--json out.json]
+// Run: npm run simulate -- [--games 500] [--turns 200] [--seed 1] [--attack 1.5] [--reserve 60] [--garrison 40] [--sweep] [--rich] [--level easy|normal|hard] [--json out.json]
 //   --sweep   compare several bot settings side by side instead of one
 // Every game is replayable: the same --seed gives the same results.
 import { writeFileSync } from 'node:fs';
-import { DEFAULT_BOT, playGame, type BotOptions, type GameResult } from '../src/game';
+import { DEFAULT_BOT, playGame, type BotOptions, type GameResult, type Level, type NewGameOptions } from '../src/game';
 
 const args = process.argv.slice(2);
 const flag = (name: string): string | undefined => {
@@ -14,6 +14,8 @@ const num = (name: string, d: number): number => { const v = flag(name); return 
 
 const games = num('games', 500), maxTurns = num('turns', 200), firstSeed = num('seed', 1);
 const base: BotOptions = { attackRatio: num('attack', DEFAULT_BOT.attackRatio), reserveGold: num('reserve', DEFAULT_BOT.reserveGold), garrisonCap: num('garrison', DEFAULT_BOT.garrisonCap) };
+
+const gameOpts: NewGameOptions = { rich: args.includes('--rich'), level: (flag('level') ?? 'normal') as Level };
 
 const median = (a: number[]): number => { if (!a.length) return NaN; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]!; };
 const mean = (a: number[]): number => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
@@ -30,7 +32,7 @@ interface Summary {
 
 function run(label: string, options: BotOptions): Summary {
   const results: GameResult[] = [];
-  for (let i = 0; i < games; i++) results.push(playGame(firstSeed + i, options, maxTurns));
+  for (let i = 0; i < games; i++) results.push(playGame(firstSeed + i, options, maxTurns, gameOpts));
   const by = (o: GameResult['over']) => results.filter((r) => r.over === o);
   const won = by('won'), lost = by('lost'), timeout = by(null);
   return {

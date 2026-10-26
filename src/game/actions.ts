@@ -1,4 +1,4 @@
-import { FORT, U } from './data';
+import { FORT, RULES, U } from './data';
 import { doSend } from './combat';
 import { farmLimit } from './economy';
 import type { Rng } from './rng';
@@ -13,7 +13,7 @@ export function canAfford(s: GameState, l: number, k: Kind, n: number): boolean 
 
 /** Muster `n` of unit `k` in a county. Each takes one person; at least 30 people must remain. */
 export function recruit(s: GameState, c: County, k: Kind, n: number): boolean {
-  if (!canAfford(s, c.owner, k, n) || c.pop - n < 30) return false;
+  if (!canAfford(s, c.owner, k, n) || c.pop - n < RULES.recruitMinPeopleLeft) return false;
   const st = s.lords[c.owner]!.stock, u = U[k];
   st.gold -= u.gold * n; st.wood -= u.wood * n; st.iron -= u.iron * n;
   c.pop -= n; c.g[k] += n; c.arr[k] += n;

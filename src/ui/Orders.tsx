@@ -1,6 +1,6 @@
-import { KINDS, NB, NEUTRAL, U, atkOf, estDef, movable, pick, splitUnits, total, type County, type GameState } from '../game';
+import { KINDS, NB, NEUTRAL, U, atkMult, atkOf, estDef, movable, pick, splitUnits, total, type County, type GameState } from '../game';
 import { oddsCls } from './format';
-import { game, select, sendOrder, sendSplit, splitAll, splitClose, splitKey, splitOpen, splitPct } from './store';
+import { game, select, sendOrder, sendSplit, setHover, splitAll, splitClose, splitKey, splitOpen, splitPct } from './store';
 
 /** Pairs (from, to) of neighbouring counties you can send troops along, for the selected county. */
 export function orderRows(s: GameState, c: County): [County, County][] {
@@ -10,14 +10,15 @@ export function orderRows(s: GameState, c: County): [County, County][] {
   return rows;
 }
 
-export function Order({ s, from, to }: { s: GameState; from: County; to: County }) {
-  const m = movable(from), mine = to.owner === from.owner, tot = total(m);
+/** One march you can order. With a mouse, pointing at it outlines the other county on the map; `back` is the card's own county, outlined again on the way out. */
+export function Order({ s, from, to, back }: { s: GameState; from: County; to: County; back?: number }) {
+  const m = movable(from), mine = to.owner === from.owner, tot = total(m), other = to.id === back ? from.id : to.id;
   const key = splitKey(from.id, to.id), open = !!game.ui.split[key];
   const modes: ['all' | 'half' | 'strike', string][] = mine
     ? [['all', 'All'], ['half', 'Half'], ['strike', 'Archers & knights']]
     : [['all', 'All'], ['half', 'Half'], ['strike', 'Strike force']];
   return (
-    <div class="order">
+    <div class="order" onPointerEnter={(e) => e.pointerType === 'mouse' && setHover(other)} onPointerLeave={(e) => e.pointerType === 'mouse' && back !== undefined && setHover(back)}>
       {mine ? (
         <div class="t"><b>Reinforce <button class="linkbtn" onClick={() => select(to.id)}>{to.name}</button></b><span>{from.name} → {to.name}</span></div>
       ) : (
@@ -25,7 +26,7 @@ export function Order({ s, from, to }: { s: GameState; from: County; to: County 
       )}
       <div class="go">
         {modes.map(([mode, label]) => {
-          const sent = pick(m, mode), a = atkOf(sent), n = total(sent);
+          const sent = pick(m, mode), a = Math.round(atkOf(sent) * atkMult(s)), n = total(sent);
           const cls = mine ? '' : n ? oddsCls(a, estDef(s, to)) : '';
           return (
             <button key={mode} class={'btn sm ' + cls} disabled={!n} onClick={() => sendOrder(from.id, to.id, mode)}>
@@ -45,7 +46,7 @@ export function Order({ s, from, to }: { s: GameState; from: County; to: County 
 function Split({ s, from, to }: { s: GameState; from: County; to: County }) {
   const key = splitKey(from.id, to.id), sp = game.ui.split[key]!;
   const m = movable(from), mine = to.owner === from.owner;
-  const sent = splitUnits(m, sp), n = total(sent), a = atkOf(sent);
+  const sent = splitUnits(m, sp), n = total(sent), a = Math.round(atkOf(sent) * atkMult(s));
   const cls = mine ? 'primary' : n ? oddsCls(a, estDef(s, to)) : '';
   const label = n ? (mine ? `Send ${n} to ${to.name}` : `${to.owner === NEUTRAL ? 'Claim' : 'Attack'} ${to.name} with ${n} · attack ${a}`) : 'Choose troops to send';
   return (

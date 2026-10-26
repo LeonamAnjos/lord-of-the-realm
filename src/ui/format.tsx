@@ -21,7 +21,7 @@ export function MoodNote({ s, c, flush }: { s: GameState; c: County; flush?: boo
 }
 
 /** Forecast of this county's population change next season. */
-export function PopNote({ s, c }: { s: GameState; c: County }) {
+export function PopNote({ s, c, flush }: { s: GameState; c: County; flush?: boolean }) {
   let t: string, col = 'var(--muted)';
   if (!realmFed(s)) { t = 'famine'; col = 'var(--bad)'; }
   else {
@@ -33,5 +33,5 @@ export function PopNote({ s, c }: { s: GameState; c: County }) {
     else if (d < -0.05) { t = 'shrinking slowly'; col = 'var(--bad)'; }
     else t = 'steady';
   }
-  return <small style={note(col)}>{t}</small>;
+  return <small style={note(col, flush ? '0' : undefined)}>{t}</small>;
 }

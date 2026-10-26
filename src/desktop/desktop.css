@@ -104,3 +104,14 @@ body.desktop .toast { bottom: 110px; left: calc((100% - var(--side) - 40px) / 2)
 
 @media (max-width: 1360px) { .dt { --side: 420px; } .dt-top { gap: 18px; padding: 10px 16px; } .dt h1 { font-size: 22px; } .dt-res .r b { font-size: 24px; } .dt-res .r i small { display: none; } }
 @media (max-width: 1360px) { .dt-res { gap: 8px; } .dt-res .r { padding-left: 10px; } .dt-res .r i { display: block; margin-left: 0; } .dt-season { min-width: 0; padding-left: 16px; } .dt-season small { display: none; } .dt-top { gap: 14px; } }
+
+/* Board labels: the list's filter fades the counties it leaves out; a red mark for a county with a warning */
+.gl-label { transition: opacity .2s; }
+.gl-label.dim { filter: opacity(.4); }
+.gl-label.warn b::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); margin-left: 6px; vertical-align: 2px; box-shadow: 0 0 0 2px rgba(234, 112, 96, .3); }
+
+/* County list on glass */
+.dt-panel .ctools { margin: 0 -18px; padding: 0 18px 8px; backdrop-filter: blur(14px); background: rgba(16, 22, 19, .55); }
+.dt-panel .cty { background: rgba(21, 27, 23, .7); }
+.dt-panel .cty:hover:not(.sel) { border-color: var(--muted); }
+.dt-bar .lastlog { margin-top: 6px; font-size: 13px; }
