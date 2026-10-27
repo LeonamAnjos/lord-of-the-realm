@@ -4,10 +4,11 @@ import * as THREE from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { NC, NEUTRAL, idlePct, season, seenTroops, troops, type County, type GameState } from '../game';
 import { COUNTY_PATH, ISLANDS, LAND_PATH, center } from '../ui/hex';
+import type { Marks } from '../ui/marks';
 
 export interface MapScene {
-  /** Show this state: the selected county and the counties it could march on. */
-  update(s: GameState, sel: number, targets: ReadonlySet<number>): void;
+  /** Show this state: the selected county, the counties it could march on and the list's hover, filter and warnings. */
+  update(s: GameState, sel: number, marks: Marks): void;
   dispose(): void;
 }
 
@@ -18,6 +19,8 @@ const wx = (x: number) => (x - W / 2) * S;
 const wz = (y: number) => (y - D / 2) * S;
 
 const OWNER_HEX = ['#c0412b', '#4f86d0', '#43a877', '#9b6bd0'];
+/** Odds of a march, as on the order buttons: good, fair, risky. */
+const ODDS_HEX: Record<string, string> = { good: '#75c47c', fair: '#e3ad43', risky: '#ea7060' };
 const NEUTRAL_HEX = '#9a9482';
 const ownerHex = (o: number) => OWNER_HEX[o] ?? NEUTRAL_HEX;
 
@@ -93,7 +96,7 @@ interface CountyNode {
   flags: THREE.Object3D[];
 }
 
-export function createScene(host: HTMLElement, onPick: (id: number) => void): MapScene {
+export function createScene(host: HTMLElement, onPick: (id: number) => void, onHover: (id: number | null) => void = () => {}): MapScene {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -312,14 +315,14 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
   }
 
   /* ---------- labels ---------- */
-  function setLabel(n: CountyNode, s: GameState, c: County, sel: boolean): void {
+  function setLabel(n: CountyNode, s: GameState, c: County, sel: boolean, dim: boolean, warn: boolean): void {
     const lord = c.owner === NEUTRAL ? 'No lord' : s.lords[c.owner]!.short;
-    const sig = [c.name, c.owner, c.pop, seenTroops(s, c), c.work.farm, c.work.wood, c.work.mine, sel].join('|');
+    const sig = [c.name, c.owner, c.pop, seenTroops(s, c), c.work.farm, c.work.wood, c.work.mine, sel, dim, warn].join('|');
     if (sig === n.labelSig) return;
     n.labelSig = sig;
     const jobs = c.owner === 0
       ? `<span class="gj"><i class="jf">${c.work.farm}</i><i class="jw">${c.work.wood}</i><i class="ji">${c.work.mine}</i><i class="jc">${idlePct(c)}</i></span>` : '';
-    n.label.className = 'gl-label' + (sel ? ' sel' : '') + (c.owner === 0 ? ' mine' : '');
+    n.label.className = 'gl-label' + (sel ? ' sel' : '') + (c.owner === 0 ? ' mine' : '') + (dim ? ' dim' : '') + (warn ? ' warn' : '');
     n.label.style.setProperty('--oc', ownerHex(c.owner));
     n.label.innerHTML = `<b>${c.name}</b><span class="gs"><em>${lord}</em> · <u>${c.pop}</u> people · <u>${seenTroops(s, c)}</u> troops</span>${jobs}`;
   }
@@ -329,19 +332,19 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
   scene.add(arrows);
   let arrowKey = '';
   const arrowLines: THREE.Line[] = [];
-  function setArrows(sel: number, targets: ReadonlySet<number>): void {
-    const key = sel + ':' + [...targets].join(',');
+  function setArrows(sel: number, odds: ReadonlyMap<number, string>): void {
+    const key = sel + ':' + [...odds].join(',');
     if (key === arrowKey) return;
     arrowKey = key;
     for (const l of arrowLines) { l.geometry.dispose(); (l.material as THREE.Material).dispose(); }
     arrowLines.length = 0; arrows.clear();
     const a = center(sel);
-    for (const t of targets) {
+    for (const [t, o] of odds) {
       const b = center(t);
       const from = new THREE.Vector3(wx(a.x), 0.95, wz(a.y)), to = new THREE.Vector3(wx(b.x), 0.95, wz(b.y));
       const mid = from.clone().lerp(to, 0.5); mid.y += 2.2;
       const pts = new THREE.QuadraticBezierCurve3(from, mid, to).getPoints(36);
-      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: '#ffe6b0', dashSize: 0.35, gapSize: 0.22, transparent: true, opacity: 0.9, toneMapped: false }));
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: ODDS_HEX[o] ?? '#ffe6b0', dashSize: 0.35, gapSize: 0.22, transparent: true, opacity: 0.9, toneMapped: false }));
       line.computeLineDistances();
       arrows.add(line); arrowLines.push(line);
     }
@@ -431,7 +434,8 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
       }
       return;
     }
-    hover = pick(e);
+    const h = pick(e);
+    if (h !== hover) { hover = h; onHover(h >= 0 ? h : null); }
     canvas.style.cursor = hover >= 0 ? 'pointer' : 'grab';
   });
   canvas.addEventListener('pointerup', (e) => {
@@ -439,27 +443,27 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
     canvas.style.cursor = 'grab';
     if (!was) { const id = pick(e); if (id >= 0) onPick(id); }
   });
-  canvas.addEventListener('pointerleave', () => { hover = -1; });
+  canvas.addEventListener('pointerleave', () => { if (hover >= 0) { hover = -1; onHover(null); } });
   canvas.addEventListener('wheel', (e) => { e.preventDefault(); goal.zoom = THREE.MathUtils.clamp(goal.zoom * Math.exp(e.deltaY * 0.0012), 0.35, 1.2); }, { passive: false });
   canvas.addEventListener('dblclick', () => { goal.yaw = 0; goal.polar = 0.9; goal.zoom = 1; goal.px = 0; goal.pz = 0; });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   canvas.style.cursor = 'grab';
 
   /* ---------- state in ---------- */
-  let cur: { s: GameState; sel: number; targets: ReadonlySet<number> } | null = null;
+  let cur: { s: GameState; sel: number; marks: Marks } | null = null;
   let se = 1;
   const sigOf = (c: County) => [c.owner, Math.ceil(c.pop / 50), Math.round(c.w * 4), c.work.farm, c.work.wood, c.work.mine, c.fort, Math.ceil(troops(c) / 12), c.i > 0].join(',');
 
-  function update(s: GameState, sel: number, targets: ReadonlySet<number>): void {
-    cur = { s, sel, targets };
+  function update(s: GameState, sel: number, marks: Marks): void {
+    cur = { s, sel, marks };
     se = season(s);
     for (const n of nodes) {
       const c = s.C[n.id]!;
       const sig = sigOf(c);
       if (sig !== n.sig) { n.sig = sig; buildProps(n, c); }
-      setLabel(n, s, c, n.id === sel);
+      setLabel(n, s, c, n.id === sel, marks.dim.has(n.id), marks.warn.has(n.id));
     }
-    setArrows(sel, targets);
+    setArrows(sel, marks.odds);
     seasonTargets.grass.set(GRASS[se]!); seasonTargets.leafA.set(LEAF[se]!); seasonTargets.leafB.set(LEAF2[se]!); seasonTargets.wheat.set(WHEAT[se]!);
     const w = WEATHER[se]!;
     pMat.color.set(w.col); pMat.size = w.size; pMat.opacity = reduced ? 0 : w.op;
@@ -467,7 +471,7 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
 
   /* ---------- frame ---------- */
   const clock = new THREE.Clock();
-  const tmp = new THREE.Vector3(), white = new THREE.Color('#ffffff'), c1 = new THREE.Color();
+  const tmp = new THREE.Vector3(), white = new THREE.Color('#ffffff'), shade = new THREE.Color('#0b171c'), c1 = new THREE.Color(), c2 = new THREE.Color();
   let elapsed = 0;
   function tick(): void {
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -491,16 +495,21 @@ export function createScene(host: HTMLElement, onPick: (id: number) => void): Ma
     const pulse = 0.5 + 0.5 * Math.sin(elapsed * 4);
     for (const n of nodes) {
       const c = cur?.s.C[n.id];
-      const isSel = cur?.sel === n.id, isTgt = !!cur?.targets.has(n.id);
-      const goalLift = isSel ? 0.3 : n.id === hover ? 0.14 : isTgt ? 0.06 : 0;
+      // the pointer on the board wins; otherwise the county pointed at in the list
+      const hov = hover >= 0 ? hover : (cur?.marks.hover ?? -1);
+      const isSel = cur?.sel === n.id, isTgt = !!cur?.marks.odds.has(n.id), isDim = !!cur?.marks.dim.has(n.id);
+      const goalLift = isSel ? 0.3 : n.id === hov ? 0.14 : isTgt ? 0.06 : 0;
       n.lift += (goalLift - n.lift) * (1 - Math.exp(-dt * 10));
       n.group.position.y = n.lift;
       const oc = ownerHex(c ? c.owner : -1);
       n.topMat.color.copy(grassCol).lerp(c1.set(oc), 0.14);
       n.ringMat.color.set(oc);
       if (isSel) n.ringMat.color.set('#ffffff');
-      else if (isTgt) n.ringMat.color.lerp(white, 0.35 + 0.65 * pulse);
-      else if (n.id === hover) n.ringMat.color.lerp(white, 0.5);
+      // only the selected county goes fully white; targets take the colour of their odds, hover brightens the owner's colour
+      else if (isTgt) { const o = ODDS_HEX[cur!.marks.odds.get(n.id)!]; n.ringMat.color.lerp(o ? c2.set(o) : white, o ? 0.45 + 0.4 * pulse : 0.08 + 0.2 * pulse); }
+      else if (n.id === hov) n.ringMat.color.lerp(white, 0.3);
+      // counties the list's filter leaves out sink into the shade
+      if (isDim && !isSel && n.id !== hov) { n.topMat.color.lerp(shade, 0.55); n.ringMat.color.lerp(shade, 0.55); }
       for (const f of n.flags) { f.rotation.y = Math.sin(elapsed * 3 + n.id) * 0.25; f.scale.x = 0.85 + 0.15 * Math.sin(elapsed * 5 + n.id); }
     }
     arrows.position.y = 0.3;

@@ -47,6 +47,8 @@ export interface LogEntry { t: number; k: string; txt: string }
 
 export interface Market { grain: number; wood: number; iron: number }
 
+export type Level = 'easy' | 'normal' | 'hard';
+
 export interface GameState {
   /** save format version */
   v: 2;
@@ -58,6 +60,14 @@ export interface GameState {
   market: Market;
   over: Over;
   log: LogEntry[];
+  /** "Living realm" rules are on (rival personalities, combined attacks, winter war, rumours, goals). Absent in a classic game. */
+  rich?: boolean;
+  /** how hard the rivals play; absent means normal */
+  level?: Level;
+  /** living realm goals: the turn each was reached, or -1 when missed */
+  goals?: Record<string, number>;
+  /** living realm tallies for the end-of-reign summary */
+  stats?: { taken: number; lost: number };
 }
 
 export interface BattleReport {

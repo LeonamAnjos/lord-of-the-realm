@@ -6,9 +6,9 @@ A medieval strategy browser game inspired by Lords of the Realm II. Single-playe
 All six steps are done: scaffold, pure rules module, tests and simulation, UI, versioned saves with export/import, PWA and Pages deploy. The legacy code is the truth for behaviour. If this file and the code disagree, the code wins and this file should be fixed. `npm run diff-legacy` proves the port still matches the legacy game move for move.
 
 ## Layout
-- `src/game/` pure rules, no DOM and no `Math.random` (a seeded RNG is always passed in): `data.ts` constants, `state.ts` new game and accessors, `economy.ts` production/food/mood/population/market/events, `combat.ts` battles/orders/scouting, `actions.ts` player actions, `ai.ts` rivals, `turn.ts` `endSeason`, `save.ts` saves, `bot.ts` a simple player used by tests and simulation.
+- `src/game/` pure rules, no DOM and no `Math.random` (a seeded RNG is always passed in): `rules.json` every tunable number (map, seasons, units, economy, battle, market, events, AI), `data.ts` exposes it under the names the code uses, `state.ts` new game and accessors, `economy.ts` production/food/mood/population/market/events, `combat.ts` battles/orders/scouting, `actions.ts` player actions, `ai.ts` rivals, `turn.ts` `endSeason`, `save.ts` saves, `bot.ts` a simple player used by tests and simulation.
 - `src/desktop/` the wide-screen layout (window at least 1100x620, or `?ui=desktop`): `DesktopApp.tsx` floating top bar, ledger and season bar; `GlMap.tsx` + `scene3d.ts` a three.js board (lazy-loaded) that reads the same state and calls `tapCounty`. Falls back to the SVG map without WebGL. Reuses the `src/ui/` panels, sheets and store, so rules and saves are shared.
-- `src/ui/` Preact components and `store.ts` (the running game, saving, every button action). CSS in `app.css` carries the legacy look.
+- `src/ui/` Preact components and `store.ts` (the running game, saving, every button action). CSS in `app.css` carries the legacy look. Tabs: Counties (`CountyList.tsx`, every county as a card: folded summary with mood, people, garrison, jobs, policy and gold/grain/wood/iron per season; open, its Work/Policy/Troops/Orders controls; filters Yours/Warnings/Border/Rivals, sort, set tax or rations for the counties shown), Realm (food check, market, goals, rival lords, saves) and Chronicle. `attention.ts` `countyFlags` makes the card tags; `marks.ts` tells both maps what the list points at (hover, filter dimming, red warnings, odds on march targets).
 - `scripts/` `simulate.ts` (balance runs), `diff-legacy.ts` + `legacy-harness.ts` (legacy vs port), `make-icons.ts`.
 - `BALANCE_NOTES.md` balance ideas and the spec-vs-legacy differences. **Do not change gameplay numbers while porting or refactoring**; write ideas there.
 
@@ -53,6 +53,8 @@ Battle: attack = sum atk * rand(0.9, 1.1) against defence * rand(0.9, 1.1). Win:
 Unclaimed counties (owner `NEUTRAL`, -1): optional, chosen in the new-reign box (None, 2, 4, 6) and never in a default game, so balance and `diff-legacy` are unchanged. They are drawn from rival counties (never yours, and every rival keeps at least one), defended by 4 spearmen, and sit still: no harvest, growth, tax or upkeep. Anyone can attack ("Claim") them with the normal battle rules; rivals treat them as foes. Winning still means holding all 12.
 "One each, random" start (`oneEach`): every lord, you included, gets one random county and the other eight have no lord. Also only on request.
 
+Living realm (optional, `s.rich`; chosen in the new-reign box, never in a default game): rival personalities (Hugh turtle with forts, Isolde raider, Godfrey trader buying iron), combined attacks by neighbouring rival counties on one of yours, winter attacks at 80% (`atkMult`), rumours in the chronicle, goals that pay gold, and a reign summary. Difficulty easy/normal/hard (`s.level`) shifts the AI attack bar, gold reserve and rival starting gold. All numbers in `rules.json`; see `BALANCE_NOTES.md`. `npm run simulate -- --rich --level hard` plays it.
+
 Orders: All, Half, Strike (archers and knights), reinforce the same options, and Split (10% to 100% per troop type, rounded up, one tap to send).
 
 AI lords: per county set farm 55/45/35 by grain security (capped by the farm limit), wood 18, mine by ore, tax by mood. Recruit with gold above 35, preferring frontier counties. Attack from turn 4 on (skipping 20% of the time), when attack/defence beats 1.55 to 1.9, otherwise reinforce toward the frontier. Rivals also buy grain with gold (3 gold each, up to half their gold) when grain is under 1.2 seasons of meals. They set nothing else (no forts, no rations).
@@ -64,7 +66,8 @@ Events (25% a season, on one of your counties): plague (12% of the people, only 
 ## UI conventions
 - Dark theme, single look. Map tile shows name, pop, troops, and (own counties) job percentages in four colours: farm, wood, mine, crafts.
 - Every forecast is visible: resources per season in the top bar, mood and population per county, grain shortage alert.
-- Sheets for battle results and help. The end-season button is pinned at the bottom.
+- Sheets for battle results and help. The end-season button is pinned at the bottom, beside the latest chronicle entry (tap it for the Chronicle). After a season ends, "What happened" sits above the county list until closed.
+- The selected county is the card opened or touched last; tapping a county on the map opens and scrolls to its card.
 
 ## Things already fixed, keep fixed
 - Ore-less counties could not lower the mining slider.

@@ -24,3 +24,12 @@ The legacy code is the truth. Where CLAUDE.md differs, the port follows the code
 `npm run simulate -- --games 2000` with the built-in bot (attack at 1.5x odds, keeps 60 gold, garrisons up to 40 per front county): about 44% wins, 56% losses, under 1% unfinished, median win around turn 27 (just under 7 years).
 
 `npm run simulate -- --sweep` compares attack thresholds. The bolder the bot, the more it wins (2.0x: about 31%, 1.2x: about 52%), so rivals are beatable by early aggression. The bot is crude and always attacks with everything. A human who plays carefully is probably much stronger, so treat these as relative numbers.
+
+## Living realm (opt-in, `rich` on the game state)
+Off by default, so classic play, `diff-legacy` and the numbers above are unchanged. Chosen in the new-reign box. Every number is in `src/game/rules.json` (`living`, `personalities`, `difficulty`, `goals`).
+- **Personalities**: Baron Hugh is a Turtle (attacks from turn 5 at 1.7x, raises forts up to level 2 when it has 60 spare gold). Lady Isolde is a Raider (from turn 3, 10% skip, 1.4x bar, more archers). Earl Godfrey is a Trader (buys a lot of 10 iron when under 9, favours knights).
+- **Combined attacks**: if no county can win alone against one of *yours*, its neighbours may join with archers and knights only, when together they beat the bar plus 0.25.
+- **Winter war**: every attack, yours included, counts at 80% in winter. Order buttons and the Inspect view already show the reduced numbers.
+- **Rumours** in the Chronicle (lord, striking unit, county, no numbers). **Goals** pay 60/100/150 gold for holding 5/8/10 counties by 1104/1108/1111. **Difficulty** moves the rivals' attack bar, gold reserve and starting gold (also works in classic, with a small effect).
+- Bot win rates (600 seeded games): classic 42%; living realm easy 53%, normal 42%, hard 33%. Tuning lessons: every softer rival (late attacks, archers only, fort spending) raised the bot's wins by 10 to 25 points, and combined attacks aimed at other rivals made rivals wreck each other (about +14 points), so they target you only. Goal gold is worth about 5 points.
+- Not done yet: trading between your own counties or county roles, fort upkeep, choice events (tribute, traitors), a post-game timeline.

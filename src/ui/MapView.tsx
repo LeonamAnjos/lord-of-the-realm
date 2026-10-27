@@ -2,14 +2,13 @@ import { NB, NEUTRAL, counties, idlePct, seenTroops, type GameState } from '../g
 import { LORD_COL } from './format';
 import { COUNTY_PATH, ISLANDS, LAND_PATH, WAVES, center } from './hex';
 import { Quick } from './Quick';
-import { tapCounty } from './store';
+import { game, tapCounty } from './store';
+import { mapMarks } from './marks';
 import { Figures, Fort, GarrisonDefs } from './garrison';
 import { Buildings, RoadStub, Terrain, TerrainDefs } from './terrain';
 
 export function MapView({ s, sel }: { s: GameState; sel: number }) {
-  const selected = s.C[sel];
-  const targets = new Set<number>();
-  if (selected && selected.owner === 0) for (const n of NB[selected.id]!) if (s.C[n]!.owner !== 0) targets.add(n);
+  const mk = mapMarks(s, game.ui);
   // draw the selected county last so its outline is on top
   const order = s.C.slice().sort((a, b) => Number(a.id === sel) - Number(b.id === sel));
   return (
@@ -33,7 +32,8 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
         </g>
         {order.map((c) => {
           const p = center(c.id);
-          const cls = 'hex o' + c.owner + (c.id === sel ? ' sel' : '') + (targets.has(c.id) ? ' tgt' : '');
+          const cls = 'hex o' + c.owner + (c.id === sel ? ' sel' : '') + (mk.odds.has(c.id) ? ' tgt ' + mk.odds.get(c.id) : '')
+            + (mk.hover === c.id && c.id !== sel ? ' hov' : '') + (mk.dim.has(c.id) ? ' dim' : '');
           return (
             <g
               key={c.id} class={cls} tabIndex={0} role="button" aria-label={`${c.name}, ${c.owner === NEUTRAL ? 'no lord' : s.lords[c.owner]!.name}`}
@@ -46,6 +46,7 @@ export function MapView({ s, sel }: { s: GameState; sel: number }) {
               {c.owner === 0 && <Fort level={c.fort} x={p.x} y={p.y} />}
               <Figures s={s} c={c} x={p.x} y={p.y} />
               <text x={p.x} y={p.y + 3}>{c.name}</text>
+              {mk.warn.has(c.id) && <circle class="wmark" cx={p.x + c.name.length * 2.9 + 5} cy={p.y - 0.5} r="3" />}
               <use class="ico" href="#ipop" x={p.x - 29} y={p.y + 10} width="9" height="9" />
               <text class="n" x={p.x - 18} y={p.y + 18}>{c.pop}</text>
               <use class="ico" href="#ishield" x={p.x + 3} y={p.y + 10} width="9" height="9" />

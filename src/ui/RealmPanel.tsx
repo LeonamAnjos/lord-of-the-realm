@@ -1,33 +1,15 @@
-import { RATION, SEASONS, TAX, atkOf, NEUTRAL, bordersYou, buyCost, counties, defence, fmtUnits, sellGain, season, taxGold, year, type GameState } from '../game';
-import { LORD_COL, MoodNote, moodWord } from './format';
+import { RULES, SEASONS, goalRows, personality, NEUTRAL, bordersYou, buyCost, counties, eat, prod, sellGain, season, year, type GameState } from '../game';
+import { LORD_COL } from './format';
 import { Section } from './Section';
 import {
-  applyImport, askNew, buyLot, cancelNew, setOneEach, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, select, sellLot, showHelp, startNewGame, taxAll, typeImport,
+  applyImport, askNew, buyLot, cancelNew, setLevel, setOneEach, setRich, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, sellLot, showHelp, startNewGame, typeImport,
 } from './store';
 
 export function RealmPanel({ s }: { s: GameState }) {
-  const L = s.lords[0]!, mine = counties(s, 0);
-  const income = mine.reduce((a, c) => a + taxGold(c), 0);
+  const L = s.lords[0]!;
   return (
     <article class="card">
-      <Section id="armies" title="Armies">
-        <div class="rows">
-          {mine.map((c) => (
-            <div class="row" key={c.id}>
-              <div class="grow">
-                <b><button class="linkbtn" onClick={() => select(c.id)}>{c.name}</button></b>
-                <small>{fmtUnits(c.g)} · attack {atkOf(c.g)}, defence {Math.round(defence(c))}</small>
-              </div>
-            </div>
-          ))}
-          <p class="note">There is no single army. Each county keeps its own garrison, and you send troops between neighbouring counties from the Orders list.</p>
-        </div>
-      </Section>
-
-      <Section id="taxes" title="Taxes">
-        <p class="note" style={{ marginBottom: '8px' }}>Tax is set in each county. Your counties bring in about {Math.round(income)} gold a season in all. To set the same rate everywhere:</p>
-        <div class="seg">{TAX.map((t, i) => <button key={i} class="btn" onClick={() => taxAll(i)}>{t.n}</button>)}</div>
-      </Section>
+      <Food s={s} />
 
       <Section id="market" title="Market">
         <div class="rows">
@@ -45,29 +27,16 @@ export function RealmPanel({ s }: { s: GameState }) {
         </div>
       </Section>
 
-      <Section id="mood" title="Mood">
-        <div class="rows">
-          {mine.map((c) => (
-            <div class="row" key={c.id}>
-              <div class="grow">
-                <b><button class="linkbtn" onClick={() => select(c.id)}>{c.name}</button></b>
-                <small>{moodWord(c.mood)} ({Math.round(c.mood)}) · {TAX[c.tax]!.n} tax, {RATION[c.ration]!.n.toLowerCase()} rations</small>
-              </div>
-              <div style={{ textAlign: 'right' }}><MoodNote s={s} c={c} flush /></div>
-            </div>
-          ))}
-          <p class="note">Population follows mood. Growth starts above 40, reaches full speed at 70 and is 1.5 times faster at 100. Below 40 people slowly leave, and below 20 they leave quickly.</p>
-        </div>
-      </Section>
+      {s.rich && <Goals s={s} />}
 
       <Section id="rivals" title="Rival lords">
         <div class="rows">
           {[1, 2, 3].map((i) => {
-            const R2 = s.lords[i]!, n = counties(s, i).length, b = counties(s, i).some((c) => bordersYou(s, c));
+            const R2 = s.lords[i]!, n = counties(s, i).length, b = counties(s, i).filter((c) => bordersYou(s, c)).length;
             return (
               <div class="row" key={i}>
                 <span class="dotc" style={{ background: `var(--${LORD_COL[i]})` }} />
-                <div class="grow"><b>{R2.name}</b><small>{R2.alive ? `${n} counties${b ? ' · borders you' : ''}` : 'Defeated'}</small></div>
+                <div class="grow"><b>{R2.name}{personality(s, i) ? ` · ${personality(s, i)!.trait}` : ''}</b><small>{R2.alive ? `${n} ${n === 1 ? 'county' : 'counties'}${b ? ` · ${b} at your border` : ''}` : 'Defeated'}{personality(s, i) ? ` · ${personality(s, i)!.blurb}` : ''}</small></div>
               </div>
             );
           })}
@@ -101,6 +70,17 @@ export function RealmPanel({ s }: { s: GameState }) {
                 </div>
               </>
             )}
+            <p class="note" style={{ marginBottom: '4px' }}>Living realm: rivals with their own ways, armies that join forces against you, weaker winter marches, rumours and goals with gold rewards:</p>
+            <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '8px' }}>
+              <button class={'btn' + (!game.ui.rich ? ' on' : '')} aria-pressed={!game.ui.rich} onClick={() => setRich(false)}>Classic</button>
+              <button class={'btn' + (game.ui.rich ? ' on' : '')} aria-pressed={game.ui.rich} onClick={() => setRich(true)}>Living realm</button>
+            </div>
+            <p class="note" style={{ marginBottom: '4px' }}>How hard the rivals play:</p>
+            <div class="seg" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '8px' }}>
+              {(['easy', 'normal', 'hard'] as const).map((lv) => (
+                <button key={lv} class={'btn' + (game.ui.level === lv ? ' on' : '')} aria-pressed={game.ui.level === lv} onClick={() => setLevel(lv)}>{RULES.difficulty[lv].name}</button>
+              ))}
+            </div>
             <div class="seg" style={{ gridTemplateColumns: '1fr 1fr' }}>
               <button class="btn" onClick={startNewGame}>Start over</button>
               <button class="btn" onClick={cancelNew}>Keep playing</button>
@@ -114,6 +94,53 @@ export function RealmPanel({ s }: { s: GameState }) {
         )}
       </div>
     </article>
+  );
+}
+
+/** Will everyone eat this season, and how long the store lasts. Grain is the one stock shared by every county. */
+function Food({ s }: { s: GameState }) {
+  const se = season(s), st = Math.floor(s.lords[0]!.stock.grain), mine = counties(s, 0);
+  const harvest = Math.round(mine.reduce((a, c) => a + prod(c, se).grain, 0)), meals = Math.round(mine.reduce((a, c) => a + eat(c), 0));
+  const left = st + harvest - meals, fed = left >= 0, lasts = meals > 0 ? Math.floor(st / meals) : 0;
+  return (
+    <Section id="food" title="Food">
+      <div class="rows">
+        <div class="row">
+          <div class="grow">
+            <b style={{ color: fed ? 'var(--good)' : 'var(--bad)' }}>{fed ? 'Everyone eats this season' : 'Not enough grain this season'}</b>
+            <small>{st} in store + {harvest} harvest − {meals} eaten = {left} left</small>
+          </div>
+        </div>
+        <p class="note">
+          {fed ? `Without a harvest, the store alone feeds your people and soldiers for about ${lasts} ${lasts === 1 ? 'season' : 'seasons'}.`
+            : 'When the realm goes hungry every county loses mood, people leave and troops desert. Buy grain at the market, farm more or set scant rations.'}
+          {se !== 3 && fed && ` Winter grows nothing, so keep about ${meals} grain for it.`}
+        </p>
+      </div>
+    </Section>
+  );
+}
+
+/** Living realm goals: hold so many counties by a year and the treasury is paid. */
+function Goals({ s }: { s: GameState }) {
+  return (
+    <Section id="goals" title="Goals">
+      <div class="rows">
+        {goalRows(s).map((g) => (
+          <div class="row" key={g.id}>
+            <div class="grow">
+              <b>{g.text}</b>
+              <small>
+                {g.state === 'done' ? `Reached in ${SEASONS[g.at % 4]} ${1100 + Math.floor(g.at / 4)}`
+                  : g.state === 'missed' ? 'Missed'
+                  : `By ${SEASONS[g.byTurn % 4]} ${1100 + Math.floor(g.byTurn / 4)}`} · {g.reward} gold
+              </small>
+            </div>
+          </div>
+        ))}
+        <p class="note">You hold {counties(s, 0).length} counties now. Each goal pays its gold once, the season you first reach it in time.</p>
+      </div>
+    </Section>
   );
 }
 

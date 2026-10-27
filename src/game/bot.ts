@@ -8,7 +8,7 @@ import { pick } from './combat';
 import { U } from './data';
 import { endSeason } from './turn';
 import { createRng, type Rng } from './rng';
-import { newGame } from './state';
+import { newGame, type NewGameOptions } from './state';
 import type { GameState, Kind } from './types';
 
 export interface BotOptions {
@@ -68,9 +68,9 @@ export interface GameResult {
 }
 
 /** Play a whole seeded game with the bot as the player. */
-export function playGame(seed: number, opts: BotOptions = DEFAULT_BOT, maxTurns = 200): GameResult {
+export function playGame(seed: number, opts: BotOptions = DEFAULT_BOT, maxTurns = 200, game: NewGameOptions = {}): GameResult {
   const rng = createRng(seed);
-  const s = newGame(rng, seed);
+  const s = newGame(rng, seed, game);
   while (!s.over && s.turn < maxTurns) {
     botOrders(s, rng, opts);
     if (s.over) break;

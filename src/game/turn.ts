@@ -1,6 +1,7 @@
 import { aiTurn, shuffle } from './ai';
 import { checkElim } from './combat';
 import { economyTick, marketDrift, rollEvent, seasonStart } from './economy';
+import { checkGoals, spreadRumours } from './living';
 import type { Rng } from './rng';
 import { logEv, season, year } from './state';
 import { SEASONS } from './data';
@@ -31,5 +32,7 @@ export function endSeason(s: GameState, rng: Rng): SeasonResult | null {
   const after = s.lords[0]!.stock;
   logEv(s, `${SEASONS[season(s)]} ${year(s)} begins. Gold ${sgn(after.gold - before.gold)}, grain ${sgn(after.grain - before.grain)}.`);
   const moved = seasonStart(s);
+  spreadRumours(s);
+  checkGoals(s);
   return { battles, moved };
 }
