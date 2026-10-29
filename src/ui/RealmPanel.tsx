@@ -2,7 +2,7 @@ import { RULES, SEASONS, goalRows, personality, NEUTRAL, bordersYou, buyCost, co
 import { LORD_COL } from './format';
 import { Section } from './Section';
 import {
-  applyImport, askNew, buyLot, cancelNew, setLevel, setOneEach, setRich, setDecide, setUnrest, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, sellLot, showHelp, startNewGame, typeImport,
+  applyImport, askNew, buyLot, cancelNew, setLevel, setOneEach, setRich, setDecide, setUnrest, setFullRealm, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, sellLot, showHelp, startNewGame, typeImport,
 } from './store';
 
 export function RealmPanel({ s }: { s: GameState }) {
@@ -55,6 +55,7 @@ export function RealmPanel({ s }: { s: GameState }) {
         {game.ui.confirm ? (
           <>
             <p class="note" style={{ marginBottom: '8px' }}>Abandon this reign and start again?</p>
+            <Rules />
             <p class="note" style={{ marginBottom: '4px' }}>How the reign starts:</p>
             <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '8px' }}>
               <button class={'btn' + (!game.ui.oneEach ? ' on' : '')} aria-pressed={!game.ui.oneEach} onClick={() => setOneEach(false)}>Three counties</button>
@@ -72,7 +73,7 @@ export function RealmPanel({ s }: { s: GameState }) {
             )}
             <p class="note" style={{ marginBottom: '4px' }}>Living realm: rivals with their own ways, armies that join forces against you, weaker winter marches, rumours and goals with gold rewards:</p>
             <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '8px' }}>
-              <button class={'btn' + (!game.ui.rich ? ' on' : '')} aria-pressed={!game.ui.rich} onClick={() => setRich(false)}>Classic</button>
+              <button class={'btn' + (!game.ui.rich ? ' on' : '')} aria-pressed={!game.ui.rich} onClick={() => setRich(false)}>Off</button>
               <button class={'btn' + (game.ui.rich ? ' on' : '')} aria-pressed={game.ui.rich} onClick={() => setRich(true)}>Living realm</button>
             </div>
             <p class="note" style={{ marginBottom: '4px' }}>Events (plague, bandits, a good harvest, merchants):</p>
@@ -104,6 +105,25 @@ export function RealmPanel({ s }: { s: GameState }) {
         )}
       </div>
     </article>
+  );
+}
+
+/** One tap for the plain game or every extra rule at once; the switches below still set each one. */
+function Rules() {
+  const u = game.ui, on = [u.rich, u.decide, u.unrest], full = on.every(Boolean), plain = !on.some(Boolean);
+  return (
+    <>
+      <p class="note" style={{ marginBottom: '4px' }}>Rules:</p>
+      <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '4px' }}>
+        <button class={'btn' + (plain ? ' on' : '')} aria-pressed={plain} onClick={() => setFullRealm(false)}>Classic</button>
+        <button class={'btn' + (full ? ' on' : '')} aria-pressed={full} onClick={() => setFullRealm(true)}>Full realm</button>
+      </div>
+      <p class="note" style={{ marginBottom: '8px' }}>
+        {full ? 'Full realm: living realm, events you choose and unrest, all on. Harder: expect to win about half as often as in a classic game.'
+          : plain ? 'Classic: the original rules. Full realm turns on all three extras below.'
+          : `Your own mix: ${on.filter(Boolean).length} of the 3 extras below are on.`}
+      </p>
+    </>
   );
 }
 

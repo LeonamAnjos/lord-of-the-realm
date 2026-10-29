@@ -286,6 +286,8 @@ export const endTurn = (): void => {
 export const askNew = (): void => act(() => { game.ui.confirm = true; });
 export const setOneEach = (v: boolean): void => act(() => { game.ui.oneEach = v; });
 export const setRich = (v: boolean): void => act(() => { game.ui.rich = v; });
+/** Turn the living realm, events you choose and unrest on or off together. */
+export const setFullRealm = (v: boolean): void => act(() => { game.ui.rich = v; game.ui.decide = v; game.ui.unrest = v; });
 export const setUnrest = (v: boolean): void => act(() => { game.ui.unrest = v; });
 export const setDecide = (v: boolean): void => act(() => { game.ui.decide = v; });
 export const setLevel = (v: Level): void => act(() => { game.ui.level = v; });
