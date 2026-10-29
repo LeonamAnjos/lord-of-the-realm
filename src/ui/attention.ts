@@ -1,4 +1,4 @@
-import { NB, pendingTitle, atkMult, atkOf, counties, estDef, farmLimit, forecast, idlePct, lordName, moodDelta, movable, season, threats, troops, type County, type GameState } from '../game';
+import { NB, inLeague, leagueAt, oldLord, pendingTitle, remembers, revoltChance, atkMult, atkOf, counties, estDef, farmLimit, forecast, idlePct, lordName, moodDelta, movable, season, threats, troops, type County, type GameState } from '../game';
 
 export interface Warn {
   key: string;
@@ -21,6 +21,11 @@ export function attention(s: GameState): Warn[] {
   if (st.grain + f.grain < 0) w.push({ key: 'grain', text: 'Grain runs out: buy grain or farm more' });
   if (st.gold + f.gold < 0) w.push({ key: 'gold', text: 'Treasury runs dry: soldiers will desert' });
   for (const c of counties(s, 0)) if (c.mood < 20) w.push({ key: 'u' + c.id, text: `Unrest in ${c.name}`, sel: c.id });
+  for (const c of counties(s, 0)) {
+    const p = revoltChance(s, c);
+    if (p > 0) w.push({ key: 'r' + c.id, text: `${c.name} may revolt (${Math.round(p * 100)}% this season): raise its mood above 30`, sel: c.id });
+  }
+  if (inLeague(s)) w.push({ key: 'league', text: `The rivals are allied against you while you hold ${leagueAt()} or more counties` });
   for (const t of threats(s).slice(0, 3)) {
     w.push({ key: 't' + t.to.id, text: `${lordName(s, t.from.owner)} (${t.from.name}) threatens ${t.to.name}`, sel: t.to.id, owner: t.from.owner });
   }
@@ -40,6 +45,10 @@ export function countyFlags(s: GameState, c: County): Flag[] {
     if (mine.some((n) => canBreak(n, c))) f.push({ tone: 'good', text: 'Can take' });
     else if (mine.length) f.push({ tone: 'info', text: 'Borders you' });
     return f;
+  }
+  if (remembers(s, c)) {
+    const p = revoltChance(s, c);
+    f.push(p > 0 ? { tone: 'bad', text: `Revolt ${Math.round(p * 100)}%` } : { tone: 'info', text: `Remembers ${oldLord(s, c)}` });
   }
   const foes = near.filter((n) => n.owner !== 0), se = season(s), d = moodDelta(s, c);
   if (threats(s).some((t) => t.to.id === c.id)) f.push({ tone: 'bad', text: 'Threatened' });

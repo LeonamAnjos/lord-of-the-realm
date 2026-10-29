@@ -1,6 +1,6 @@
 // Read-only view of a rival's county, switched on with ?inspect in the address. Shows what the rival AI is actually working with.
 import {
-  FORT, KINDS, RULES, aiFarmPct, aiParams, atkMult, personality, forecast, NB, RATION, SEASONS, TAX, U, aiPlan, atkOf, capOf, craft, defence, eat, farmLimit, fortMult, idlePct, movable, prod, season, troops,
+  FORT, KINDS, RULES, inLeague, aiFarmPct, aiParams, atkMult, personality, forecast, NB, RATION, SEASONS, TAX, U, aiPlan, atkOf, capOf, craft, defence, eat, farmLimit, fortMult, idlePct, movable, prod, season, troops,
   type County, type GameState,
 } from '../game';
 import { MoodNote, PopNote, moodCol, moodWord, ownerCol, pips, signed } from './format';
@@ -144,7 +144,7 @@ function Orders({ s, c }: { s: GameState; c: County }) {
               );
             })}
             <p class="note">
-              A frontier county attacks when strength over defence beats a bar rolled each turn between {lo.toFixed(2)} and {hi.toFixed(2)}, taking the best target (strike force first). Nothing happens before turn {A.fromTurn} (now {s.turn}) and {Math.round(A.skipChance * 100)}% of the time it sits still.{p ? ` ${p.trait}: ${p.blurb}.` : ''}{atkMult(s) < 1 ? ` Winter: attacks count at ${Math.round(atkMult(s) * 100)}%.` : ''}{s.rich && RULES.living.combinedAttacks ? ` If no county can win alone, neighbouring counties may attack one of yours together (archers and knights only, bar +${RULES.living.combinedBarAdd}).` : ''}
+              A frontier county attacks when strength over defence beats a bar rolled each turn between {lo.toFixed(2)} and {hi.toFixed(2)}, taking the best target (strike force first). Nothing happens before turn {A.fromTurn} (now {s.turn}) and {Math.round(A.skipChance * 100)}% of the time it sits still.{p ? ` ${p.trait}: ${p.blurb}.` : ''}{atkMult(s) < 1 ? ` Winter: attacks count at ${Math.round(atkMult(s) * 100)}%.` : ''}{inLeague(s) ? ` Allied against you: attacks only your counties, bar ${RULES.unrest.league.barAdd}, and neighbours join forces.` : ''}{s.rich && RULES.living.combinedAttacks ? ` If no county can win alone, neighbouring counties may attack one of yours together (archers and knights only, bar +${RULES.living.combinedBarAdd}).` : ''}
             </p>
           </>
         ) : (

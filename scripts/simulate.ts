@@ -1,5 +1,5 @@
 // Headless balance simulation: plays many seeded games with a simple bot as the player and prints the outcome mix.
-// Run: npm run simulate -- [--games 500] [--turns 200] [--seed 1] [--attack 1.5] [--reserve 60] [--garrison 40] [--sweep] [--rich] [--decide] [--level easy|normal|hard] [--json out.json]
+// Run: npm run simulate -- [--games 500] [--turns 200] [--seed 1] [--attack 1.5] [--reserve 60] [--garrison 40] [--sweep] [--rich] [--decide] [--unrest] [--level easy|normal|hard] [--json out.json]
 //   --sweep   compare several bot settings side by side instead of one
 // Every game is replayable: the same --seed gives the same results.
 import { writeFileSync } from 'node:fs';
@@ -15,7 +15,7 @@ const num = (name: string, d: number): number => { const v = flag(name); return 
 const games = num('games', 500), maxTurns = num('turns', 200), firstSeed = num('seed', 1);
 const base: BotOptions = { attackRatio: num('attack', DEFAULT_BOT.attackRatio), reserveGold: num('reserve', DEFAULT_BOT.reserveGold), garrisonCap: num('garrison', DEFAULT_BOT.garrisonCap) };
 
-const gameOpts: NewGameOptions = { rich: args.includes('--rich'), decide: args.includes('--decide'), level: (flag('level') ?? 'normal') as Level };
+const gameOpts: NewGameOptions = { rich: args.includes('--rich'), decide: args.includes('--decide'), unrest: args.includes('--unrest'), level: (flag('level') ?? 'normal') as Level };
 
 const median = (a: number[]): number => { if (!a.length) return NaN; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]!; };
 const mean = (a: number[]): number => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);

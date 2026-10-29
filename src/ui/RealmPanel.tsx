@@ -2,7 +2,7 @@ import { RULES, SEASONS, goalRows, personality, NEUTRAL, bordersYou, buyCost, co
 import { LORD_COL } from './format';
 import { Section } from './Section';
 import {
-  applyImport, askNew, buyLot, cancelNew, setLevel, setOneEach, setRich, setDecide, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, sellLot, showHelp, startNewGame, typeImport,
+  applyImport, askNew, buyLot, cancelNew, setLevel, setOneEach, setRich, setDecide, setUnrest, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, sellLot, showHelp, startNewGame, typeImport,
 } from './store';
 
 export function RealmPanel({ s }: { s: GameState }) {
@@ -79,6 +79,11 @@ export function RealmPanel({ s }: { s: GameState }) {
             <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '8px' }}>
               <button class={'btn' + (!game.ui.decide ? ' on' : '')} aria-pressed={!game.ui.decide} onClick={() => setDecide(false)}>Just happen</button>
               <button class={'btn' + (game.ui.decide ? ' on' : '')} aria-pressed={game.ui.decide} onClick={() => setDecide(true)}>You choose</button>
+            </div>
+            <p class="note" style={{ marginBottom: '4px' }}>Conquered counties: with Unrest they remember their old lord for {RULES.unrest.memoryTurns / 4} years and may revolt while mood is under {RULES.unrest.belowMood}, and rivals ally against you once you hold {RULES.unrest.league.counties}:</p>
+            <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '8px' }}>
+              <button class={'btn' + (!game.ui.unrest ? ' on' : '')} aria-pressed={!game.ui.unrest} onClick={() => setUnrest(false)}>Stay quiet</button>
+              <button class={'btn' + (game.ui.unrest ? ' on' : '')} aria-pressed={game.ui.unrest} onClick={() => setUnrest(true)}>Unrest</button>
             </div>
             <p class="note" style={{ marginBottom: '4px' }}>How hard the rivals play:</p>
             <div class="seg" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '8px' }}>

@@ -9,5 +9,6 @@ export * from './ai';
 export * from './turn';
 export * from './living';
 export * from './choices';
+export * from './unrest';
 export * from './save';
 export * from './bot';

@@ -2,7 +2,7 @@
 // Open, it holds the county's controls (work, policy, troops, orders), so you can run the realm without stepping from county to county.
 import { useEffect, useState } from 'preact/hooks';
 import {
-  FORT, KINDS, NB, NEUTRAL, pendingTitle, RATION, SEASONS, TAX, U, atkMult, atkOf, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season, seenTroops, START_YEAR, taxGold, upkeep,
+  FORT, KINDS, NB, NEUTRAL, garrisonHold, oldLord, pendingTitle, rebels, remembers, revoltChance, sinceStamp, UNREST_BELOW, RATION, SEASONS, TAX, U, atkMult, atkOf, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season, seenTroops, START_YEAR, taxGold, upkeep,
   type County, type GameState, type Work,
 } from '../game';
 import { countyFlags } from './attention';
@@ -171,6 +171,11 @@ function OwnSummary({ s, c }: { s: GameState; c: County }) {
         <span class="cchip"><b>{RATION[c.ration]!.n}</b> rations</span>
         {c.fort > 0 && <span class="cchip">Fort <b>{c.fort}</b>/3</span>}
       </span>
+      {remembers(s, c) && (
+        <span class="cunrest">
+          Remembers {oldLord(s, c)} until {sinceStamp(c)}. Revolt chance this season: <b>{Math.round(revoltChance(s, c) * 100)}%</b> (only while mood is under {UNREST_BELOW}). About {rebels(c)} rebels against garrison defence {Math.round(garrisonHold(c))}.
+        </span>
+      )}
       <span class="cnet" aria-label="Change each season">
         {net.map(([k, v]) => {
           const r = Math.abs(v) < 10 && Math.round(v * 10) % 10 !== 0 ? Math.round(v * 10) / 10 : Math.round(v);

@@ -19,6 +19,8 @@ export interface NewGameOptions {
   rich?: boolean;
   /** events ask what to do */
   decide?: boolean;
+  /** conquered counties may revolt, and rivals band together against you when you lead */
+  unrest?: boolean;
   level?: Level;
 }
 
@@ -85,6 +87,7 @@ export function newGame(rng: Rng, seed: number, opts: NewGameOptions = {}): Game
   };
   if (level !== 'normal') s.level = level;
   if (opts.decide) s.decide = true;
+  if (opts.unrest) s.unrest = true;
   if (opts.rich) {
     s.rich = true; s.goals = {}; s.stats = { taken: 0, lost: 0 };
     const P = RULES.personalities;

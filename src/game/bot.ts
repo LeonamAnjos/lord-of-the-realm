@@ -1,7 +1,8 @@
 // A simple, deterministic stand-in for a human player, used by the replay tests and the balance simulation.
 // It never calls the RNG itself, so the game's random sequence depends only on the orders it gives.
 import { frontierStep, enemyNb } from './ai';
-import { recruit, playerSend, setWork } from './actions';
+import { recruit, playerSend, setTax, setWork } from './actions';
+import { remembers } from './unrest';
 import { atkOf, counties, defence, movable, total } from './state';
 import { buy, forecast } from './economy';
 import { pick } from './combat';
@@ -29,6 +30,8 @@ export function botOrders(s: GameState, rng: Rng, o: BotOptions = DEFAULT_BOT): 
   for (let guard = 0; guard < 20 && st.grain + forecast(s, 0).grain < 0 && buy(s, 'grain'); guard++);
   // winter has no harvest: farmers are moved to crafts by the game, nothing to do here
   for (const c of counties(s, 0)) {
+    // unrest rules: keep a conquered county happy until it accepts your rule
+    if (remembers(s, c)) setTax(c, c.mood < 36 ? 1 : 2);
     if (c.i > 0 && c.work.mine < 10) setWork(s, c, 'mine', 5);
     const frontier = enemyNb(s, c).length > 0;
     if (!frontier || total(c.g) >= o.garrisonCap) continue;

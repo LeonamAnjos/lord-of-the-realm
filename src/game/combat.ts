@@ -51,6 +51,7 @@ export function battle(s: GameState, rng: Rng, from: County, to: County, m: Unit
     }
     for (const k of KINDS) rep.lostD[k] = to.g[k];
     to.mus = zero(); to.tax = NORMAL_TAX; to.ration = NORMAL_RATION; to.owner = from.owner;
+    if (s.unrest && to.owner === 0) { to.was = rep.dfn; to.since = s.turn; } else { delete to.was; delete to.since; }
     to.g = surv; to.arr = { spear: surv.spear, archer: surv.archer, knight: surv.knight };
     to.pop = Math.max(B.conqueredPopMin, Math.round(to.pop * B.conqueredPopKeeps)); to.mood = B.conqueredMood; to.fort = Math.max(0, to.fort - B.conqueredFortLoss);
     to.work = defaultWork(to.i);
