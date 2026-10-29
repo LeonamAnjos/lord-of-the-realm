@@ -33,6 +33,9 @@ export interface County {
   farmPref: number;
   /** fractional population carried between seasons */
   pf: number;
+  /** unrest rules: the lord you took this county from (-1 for no lord), and the turn you took it */
+  was?: number;
+  since?: number;
 }
 
 export interface Lord {
@@ -70,6 +73,10 @@ export interface GameState {
   stats?: { taken: number; lost: number };
   /** "Choices" rules are on: events ask you what to do. Absent in a classic game. */
   decide?: boolean;
+  /** "Unrest" rules are on: conquered counties may revolt and rivals band together against a leader. Absent in a classic game. */
+  unrest?: boolean;
+  /** unrest rules: the rivals are allied against you right now */
+  league?: boolean;
   /** an event waiting for your answer; settled with its default when the season ends */
   pending?: Pending;
 }

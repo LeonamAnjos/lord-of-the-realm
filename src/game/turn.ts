@@ -3,6 +3,7 @@ import { checkElim } from './combat';
 import { economyTick, marketDrift, rollEvent, seasonStart } from './economy';
 import { checkGoals, spreadRumours } from './living';
 import { decide, defaultChoice } from './choices';
+import { rollRevolts } from './unrest';
 import type { Rng } from './rng';
 import { logEv, season, year } from './state';
 import { SEASONS } from './data';
@@ -17,7 +18,7 @@ export interface SeasonResult {
   moved: number;
 }
 
-/** End the season: rival AI turns, economy tick, market drift, random event, turn counter, then season start. */
+/** End the season: rival AI turns, economy tick, market drift, random event, revolts (unrest rules), turn counter, then season start. */
 export function endSeason(s: GameState, rng: Rng): SeasonResult | null {
   if (s.over) return null;
   const battles: BattleReport[] = [];
@@ -29,6 +30,7 @@ export function endSeason(s: GameState, rng: Rng): SeasonResult | null {
   economyTick(s);
   marketDrift(s, rng);
   rollEvent(s, rng);
+  rollRevolts(s, rng);
   s.turn++;
   checkElim(s);
   const after = s.lords[0]!.stock;

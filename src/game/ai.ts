@@ -5,6 +5,7 @@ import { eat, farmLimit, marketPrice } from './economy';
 import { index, type Rng } from './rng';
 import { atkMult, atkOf, counties, defence, movable, season, total } from './state';
 import type { BattleReport, County, GameState, Kind } from './types';
+import { inLeague } from './unrest';
 
 export function shuffle<T>(rng: Rng, a: T[]): T[] {
   a = a.slice();
@@ -116,10 +117,12 @@ function aiMove(s: GameState, rng: Rng, l: number, P: Params, pending?: BattleRe
     if (c.owner !== l) continue;
     const m = movable(c);
     if (!total(m)) continue;
-    const foes = enemyNb(s, c);
-    if (foes.length) {
-      if (s.turn < P.attack.fromTurn || rng() < P.attack.skipChance) continue;
-      const need = P.attack.needBase + rng() * P.attack.needSpread;
+    const all = enemyNb(s, c), league = inLeague(s);
+    // In a pact against you, rivals only attack your counties and sit still elsewhere.
+    const foes = league ? all.filter((n) => n.owner === 0) : all;
+    if (all.length) {
+      if (!foes.length || s.turn < P.attack.fromTurn || rng() < P.attack.skipChance) continue;
+      const need = P.attack.needBase + rng() * P.attack.needSpread + (league ? RULES.unrest.league.barAdd : 0);
       let best: County | null = null, mode: 'strike' | 'all' | null = null, bs = 0;
       for (const n of foes) {
         const D = defence(n);
@@ -128,7 +131,7 @@ function aiMove(s: GameState, rng: Rng, l: number, P: Params, pending?: BattleRe
         else if (s2 > need && s2 > bs) { bs = s2; best = n; mode = 'all'; }
       }
       if (best && mode) doSend(s, rng, c, best, mode, pending);
-      else if (s.rich && RULES.living.combinedAttacks) aiCombined(s, rng, c, foes, need, pending);
+      else if ((s.rich && RULES.living.combinedAttacks) || league) aiCombined(s, rng, c, foes, need, pending);
     } else {
       const step = frontierStep(s, c, l);
       if (step !== null) doSend(s, rng, c, s.C[step]!, 'all', pending);

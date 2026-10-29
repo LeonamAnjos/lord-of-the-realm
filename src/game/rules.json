@@ -166,6 +166,19 @@
     "fortsKeepGold": 60
   },
 
+  "unrest": {
+    "memoryTurns": 12,
+    "belowMood": 30,
+    "chanceBase": 0.03,
+    "chancePerMood": 0.012,
+    "chanceMax": 0.5,
+    "rebelShare": 0.2,
+    "rebelsKeep": 0.5,
+    "crushedPeopleLoss": 0.5,
+    "freedMood": 50,
+    "league": { "counties": 7, "barAdd": -0.15 }
+  },
+
   "personalities": {
     "1": { "trait": "Turtle", "blurb": "Walls up the frontier, attacks late and only when sure",
            "attack": { "fromTurn": 5, "needBase": 1.7 },

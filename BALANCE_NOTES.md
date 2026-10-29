@@ -33,3 +33,9 @@ Off by default, so classic play, `diff-legacy` and the numbers above are unchang
 - **Rumours** in the Chronicle (lord, striking unit, county, no numbers). **Goals** pay 60/100/150 gold for holding 5/8/10 counties by 1104/1108/1111. **Difficulty** moves the rivals' attack bar, gold reserve and starting gold (also works in classic, with a small effect).
 - Bot win rates (600 seeded games): classic 42%; living realm easy 53%, normal 42%, hard 33%. Tuning lessons: every softer rival (late attacks, archers only, fort spending) raised the bot's wins by 10 to 25 points, and combined attacks aimed at other rivals made rivals wreck each other (about +14 points), so they target you only. Goal gold is worth about 5 points.
 - Not done yet: trading between your own counties or county roles, fort upkeep, choice events (tribute, traitors), a post-game timeline.
+
+## Unrest (optional, `s.unrest`)
+Measured with `npm run simulate -- --unrest` and the bot keeping conquered counties on Low tax until mood 36 (600 games):
+classic 42% wins (median win turn 27), unrest 21% (turn 36). Roughly: the Low tax costs 10 points, revolts 5, the rivals' pact 6.
+Revolts were 0.05 + 0.015 per mood point under 30 at first; that left the bot at 21% too but with wins at turn 49, so it was lowered to 0.03 + 0.012.
+Ideas: the pact could end when you drop below 7 only after a season's delay; restless counties could be calmed by a garrison (more troops, lower chance).
