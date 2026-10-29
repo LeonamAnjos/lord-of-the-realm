@@ -39,3 +39,6 @@ Measured with `npm run simulate -- --unrest` and the bot keeping conquered count
 classic 42% wins (median win turn 27), unrest 21% (turn 36). Roughly: the Low tax costs 10 points, revolts 5, the rivals' pact 6.
 Revolts were 0.05 + 0.015 per mood point under 30 at first; that left the bot at 21% too but with wins at turn 49, so it was lowered to 0.03 + 0.012.
 Ideas: the pact could end when you drop below 7 only after a season's delay; restless counties could be calmed by a garrison (more troops, lower chance).
+
+## Full realm (living realm + events you choose + unrest)
+1000 bot games: classic 44%, living realm 42%, all three 21% (median win turn 30). Difficulty barely moves it with all three on: easy 24%, hard 24%. The unrest pressure swamps the AI's attack bar; a harder level may need to act on something else (rival gold, revolt chance).
