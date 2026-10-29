@@ -2,6 +2,7 @@ import { BASE, FARM_LIMIT, RULES, FARM_MULT, GRAIN_SEASON, KINDS, RATION, SEASON
 import { type Rng, index, range } from './rng';
 import { capOf, clamp, counties, idlePct, logEv, season, troops, upkeep, zero } from './state';
 import type { County, GameState, Stock } from './types';
+import { banditStrength, pendingTitle } from './choices';
 
 const P = RULES.production, M = RULES.mood, POP = RULES.population, FAM = RULES.famine, MK = RULES.market, EV = RULES.events;
 
@@ -173,6 +174,16 @@ export function rollEvent(s: GameState, rng: Rng): void {
   const c = mine[index(rng, mine.length)]!;
   const st = s.lords[0]!.stock;
   const r = rng();
+  if (s.decide) {
+    // Same rolls as a classic game; the outcome waits for your answer (see choices.ts).
+    const t = s.turn + 1;
+    if (r < 0.25 && c.pop > EV.plague.onlyAbovePeople) s.pending = { kind: 'plague', c: c.id, n: Math.round(c.pop * EV.plague.share), t };
+    else if (r < 0.5) s.pending = { kind: 'bumper', c: c.id, n: Math.round(range(rng, EV.bumper.min, EV.bumper.max)), t };
+    else if (r < 0.75) s.pending = { kind: 'bandits', c: c.id, n: Math.min(Math.round(st.gold * EV.bandits.share), EV.bandits.max), t, band: banditStrength(s, rng) };
+    else s.pending = { kind: 'caravan', c: c.id, n: Math.round(range(rng, EV.caravan.min, EV.caravan.max)), t };
+    logEv(s, `${pendingTitle(s, s.pending)}: your decision is needed.`);
+    return;
+  }
   if (r < 0.25 && c.pop > EV.plague.onlyAbovePeople) {
     const loss = Math.round(c.pop * EV.plague.share);
     c.pop -= loss;

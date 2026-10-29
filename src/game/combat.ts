@@ -23,7 +23,7 @@ export function pick(m: Units, mode: Mode): Units {
   return r;
 }
 
-function applyLoss(g: Units, cf: number, lost: Units): Units {
+export function applyLoss(g: Units, cf: number, lost: Units): Units {
   const rem = zero();
   for (const k of KINDS) {
     const l = Math.round(g[k] * cf);

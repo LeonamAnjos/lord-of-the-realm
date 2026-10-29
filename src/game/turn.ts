@@ -2,6 +2,7 @@ import { aiTurn, shuffle } from './ai';
 import { checkElim } from './combat';
 import { economyTick, marketDrift, rollEvent, seasonStart } from './economy';
 import { checkGoals, spreadRumours } from './living';
+import { decide, defaultChoice } from './choices';
 import type { Rng } from './rng';
 import { logEv, season, year } from './state';
 import { SEASONS } from './data';
@@ -20,6 +21,7 @@ export interface SeasonResult {
 export function endSeason(s: GameState, rng: Rng): SeasonResult | null {
   if (s.over) return null;
   const battles: BattleReport[] = [];
+  if (s.pending) decide(s, rng, defaultChoice(s, s.pending), true);
   const before = { ...s.lords[0]!.stock };
   for (const l of shuffle(rng, [1, 2, 3])) {
     if (s.lords[l]!.alive && !s.over) aiTurn(s, rng, l, battles);

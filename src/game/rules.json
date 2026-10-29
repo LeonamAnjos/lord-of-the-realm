@@ -141,6 +141,13 @@
     "caravan": { "min": 25, "max": 55 }
   },
 
+  "choices": {
+    "plague": { "healersGold": 30, "healersShare": 0.05, "sealMood": -10, "spreadShare": 0.06 },
+    "bumper": { "feastShare": 0.5, "feastMoodHere": 8, "feastMoodElsewhere": 3 },
+    "bandits": { "strengthMin": 8, "strengthMax": 24, "strengthPerYear": 3, "bounty": 0.5, "winLoss": { "factor": 0.3, "min": 0.05, "max": 0.5 }, "loseTroops": 0.2, "hideShare": 0.5, "hideMood": -6 },
+    "caravan": { "iron": 15, "ironPriceShare": 0.6, "settlers": 15 }
+  },
+
   "ai": {
     "farm": { "tight": 55, "normal": 45, "safe": 35, "tightBelowSecurity": 1.6, "safeAboveSecurity": 3.2 },
     "wood": 18,

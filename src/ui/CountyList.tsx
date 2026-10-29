@@ -2,7 +2,7 @@
 // Open, it holds the county's controls (work, policy, troops, orders), so you can run the realm without stepping from county to county.
 import { useEffect, useState } from 'preact/hooks';
 import {
-  FORT, KINDS, NB, NEUTRAL, RATION, SEASONS, TAX, U, atkMult, atkOf, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season, seenTroops, START_YEAR, taxGold, upkeep,
+  FORT, KINDS, NB, NEUTRAL, pendingTitle, RATION, SEASONS, TAX, U, atkMult, atkOf, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season, seenTroops, START_YEAR, taxGold, upkeep,
   type County, type GameState, type Work,
 } from '../game';
 import { countyFlags } from './attention';
@@ -11,7 +11,7 @@ import { InspectCounty, INSPECT } from './Inspect';
 import { Order, orderRows } from './Orders';
 import { CountyScene } from './scene';
 import {
-  adjustWork, closeAll, closeRecap, fort, game, inView, inspect, muster, openAll, ration, rationSome, scrolled, setCardTab, setHover, setSort, setTab, setView, tax, taxSome, toggleCard, undo,
+  adjustWork, showChoice, closeAll, closeRecap, fort, game, inView, inspect, muster, openAll, ration, rationSome, scrolled, setCardTab, setHover, setSort, setTab, setView, tax, taxSome, toggleCard, undo,
   type CTab, type Sort, type View,
 } from './store';
 
@@ -53,6 +53,12 @@ export function CountyList({ s }: { s: GameState }) {
   return (
     <div class="pbody clist" onPointerLeave={(e) => mouse(e) && setHover(null)}>
       <Toolbar s={s} own={own} ids={list.map((c) => c.id)} />
+      {s.pending && (
+        <div class="cdecide">
+          <b>{pendingTitle(s, s.pending)}</b>
+          <button class="btn" onClick={showChoice}>Decide</button>
+        </div>
+      )}
       <Recap />
       {list.length ? list.map((c) => <Card key={c.id} s={s} c={c} />)
         : <p class="cempty">{ui.view === 'warn' ? 'No county of yours has a warning this season.' : ui.view === 'rivals' ? 'Every county is yours.' : 'None of your counties is shown here.'}</p>}
