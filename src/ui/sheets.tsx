@@ -1,9 +1,31 @@
 import type { ComponentChildren } from 'preact';
 import { BattleArt } from './battle';
 import type { Warn } from './attention';
-import { fmtUnits, goalRows, lordName, type BattleReport, type GameState } from '../game';
+import { choiceOptions, fmtUnits, goalRows, lordName, pendingText, pendingTitle, type BattleReport, type GameState, type Pending } from '../game';
 
-export interface Sheet { title: string; body: ComponentChildren; btn: string; cb?: () => void }
+export interface Sheet { title: string; body: ComponentChildren; btn: string; cb?: () => void; key?: string }
+
+/** An event that waits for your answer: each option says what it costs and gives. */
+export function choiceSheet(s: GameState, p: Pending, pick: (id: string) => void): Sheet {
+  const opts = choiceOptions(s, p), dflt = opts.find((o) => o.dflt)!;
+  return {
+    title: pendingTitle(s, p), btn: 'Decide later', key: 'choice',
+    body: (
+      <>
+        <p>{pendingText(s, p)}</p>
+        <div class="rows">
+          {opts.map((o) => (
+            <button key={o.id} class="btn choice" disabled={!!o.no} onClick={() => pick(o.id)}>
+              <b>{o.label}{o.no ? ` · ${o.no}` : ''}</b>
+              <span>{o.text}</span>
+            </button>
+          ))}
+        </div>
+        <p class="note">If the season ends before you choose: {dflt.label.toLowerCase()}.</p>
+      </>
+    ),
+  };
+}
 
 export function battleSheet(s: GameState, rep: BattleReport): Sheet {
   const you = rep.att === 0;

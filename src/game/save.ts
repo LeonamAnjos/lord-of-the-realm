@@ -57,6 +57,7 @@ export function parseSave(text: string | null): Loaded | null {
     v: 2, seed, turn: s.turn, lords: s.lords, C, market: s.market,
     over: (s.over ?? null) as Over, log: s.log ?? [],
     ...(s.rich ? { rich: true, goals: s.goals ?? {}, stats: s.stats ?? { taken: 0, lost: 0 } } : {}),
+    ...(s.decide ? { decide: true, ...(s.pending ? { pending: s.pending } : {}) } : {}),
     ...(s.level === 'easy' || s.level === 'hard' ? { level: s.level } : {}),
   };
   for (const c of counties(state, 0)) applyFarmLimit(state, c);

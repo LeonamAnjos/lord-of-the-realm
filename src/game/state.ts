@@ -17,6 +17,8 @@ export interface NewGameOptions {
   oneEach?: boolean;
   /** switch on the living realm rules */
   rich?: boolean;
+  /** events ask what to do */
+  decide?: boolean;
   level?: Level;
 }
 
@@ -82,6 +84,7 @@ export function newGame(rng: Rng, seed: number, opts: NewGameOptions = {}): Game
     log: [{ t: 0, k: '', txt: intro }],
   };
   if (level !== 'normal') s.level = level;
+  if (opts.decide) s.decide = true;
   if (opts.rich) {
     s.rich = true; s.goals = {}; s.stats = { taken: 0, lost: 0 };
     const P = RULES.personalities;

@@ -1,4 +1,4 @@
-import { NB, atkMult, atkOf, counties, estDef, farmLimit, forecast, idlePct, lordName, moodDelta, movable, season, threats, troops, type County, type GameState } from '../game';
+import { NB, pendingTitle, atkMult, atkOf, counties, estDef, farmLimit, forecast, idlePct, lordName, moodDelta, movable, season, threats, troops, type County, type GameState } from '../game';
 
 export interface Warn {
   key: string;
@@ -17,6 +17,7 @@ export const IDLE_GOLD = 100;
 /** Things that need you before the season ends: hunger, an empty treasury, unrest, rival armies at the border, gold lying idle. */
 export function attention(s: GameState): Warn[] {
   const st = s.lords[0]!.stock, f = forecast(s, 0), w: Warn[] = [];
+  if (s.pending) w.push({ key: 'choice', text: `Decision waiting: ${pendingTitle(s, s.pending)}` });
   if (st.grain + f.grain < 0) w.push({ key: 'grain', text: 'Grain runs out: buy grain or farm more' });
   if (st.gold + f.gold < 0) w.push({ key: 'gold', text: 'Treasury runs dry: soldiers will desert' });
   for (const c of counties(s, 0)) if (c.mood < 20) w.push({ key: 'u' + c.id, text: `Unrest in ${c.name}`, sel: c.id });

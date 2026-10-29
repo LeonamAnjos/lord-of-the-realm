@@ -2,12 +2,12 @@
 // the screen state (selected county, tab, open sheets), saving, and every action a button can trigger.
 import { useEffect, useState } from 'preact/hooks';
 import {
-  SAVE_KEY, buildFort, buy, exportText, importText, clamp, createRng, endSeason, fmtUnits, newGame, parseSave, playerSend, recruit, sell, serialize,
+  SAVE_KEY, buildFort, decide, buy, exportText, importText, clamp, createRng, endSeason, fmtUnits, newGame, parseSave, playerSend, recruit, sell, serialize,
   setRation, setTax, setWork, unmuster, KINDS, NB, movable, total, SEASONS, year, season,
   type GameState, type Kind, type Level, type Loaded, type Mode, type Rng, type Units, type Work,
 } from '../game';
 import { attention, countyFlags } from './attention';
-import { attentionSheet, battleSheet, helpSheet, overSheet, type Sheet } from './sheets';
+import { attentionSheet, battleSheet, choiceSheet, helpSheet, overSheet, type Sheet } from './sheets';
 
 export type Tab = 'county' | 'realm' | 'chronicle';
 export type CTab = 'work' | 'policy' | 'troops' | 'orders';
@@ -47,6 +47,8 @@ export interface Ui {
   oneEach: boolean;
   /** the next reign uses the living realm rules */
   rich: boolean;
+  /** events in the next reign ask what to do */
+  decide: boolean;
   /** how hard the rivals play in the next reign */
   level: Level;
   /** open split dialogs, by "from-to" */
@@ -68,7 +70,7 @@ export const game = {
   fold: loadFolds(),
   s: undefined as unknown as GameState,
   rng: undefined as unknown as Rng,
-  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, rich: false, level: 'normal', ctab: 'work', open: [], ctabs: {}, view: 'mine', sort: 'map', hover: null, scrollTo: null, recap: null, inspect: null, full: false, quick: null, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
+  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, rich: false, decide: false, level: 'normal', ctab: 'work', open: [], ctabs: {}, view: 'mine', sort: 'map', hover: null, scrollTo: null, recap: null, inspect: null, full: false, quick: null, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
   sheets: [] as Sheet[],
   toast: null as string | null,
   /** the board fades out while a season ends, then back in with the new one */
@@ -100,7 +102,7 @@ const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0]!;
 
 function begin(seed: number): void {
   game.rng = createRng(seed);
-  game.s = newGame(game.rng, seed, { unclaimed: game.ui.wild, oneEach: game.ui.oneEach, rich: game.ui.rich, level: game.ui.level });
+  game.s = newGame(game.rng, seed, { unclaimed: game.ui.wild, oneEach: game.ui.oneEach, rich: game.ui.rich, decide: game.ui.decide, level: game.ui.level });
   game.ui.quick = null;
 }
 
@@ -129,15 +131,30 @@ export function boot(): void {
     game.ui.sel = typeof u.sel === 'number' ? u.sel : 4;
     game.ui.tab = u.tab === 'realm' || u.tab === 'chronicle' ? u.tab : 'county';
     game.ui.help = !!u.help;
-    game.ui.rich = !!loaded.state.rich; game.ui.level = loaded.state.level ?? 'normal';
+    game.ui.rich = !!loaded.state.rich; game.ui.decide = !!loaded.state.decide; game.ui.level = loaded.state.level ?? 'normal';
   } else {
     begin(randomSeed());
   }
   game.ui.open = [game.ui.sel]; game.ui.scrollTo = game.ui.sel;
   if (!game.ui.help) { game.ui.help = true; pushSheet(helpSheet()); }
   if (game.s.over) pushSheet(overSheet(game.s, startNewGame));
+  else queueChoice();
   persist();
 }
+
+/** Show the waiting event's choices, once. */
+function queueChoice(): void {
+  const p = game.s.pending;
+  if (p && !game.sheets.some((x) => x.key === 'choice')) pushSheet(choiceSheet(game.s, p, choose));
+}
+/** Answer the waiting event. */
+export const choose = (id: string): void => act(() => {
+  if (!decide(game.s, game.rng, id)) { toast('That cannot be chosen now.'); return; }
+  game.sheets = game.sheets.filter((x) => x.key !== 'choice');
+  const e = game.s.log[game.s.log.length - 1];
+  if (e) toast(e.txt);
+});
+export const showChoice = (): void => act(queueChoice);
 
 /* ---------- actions ---------- */
 /** Which counties a list view holds. */
@@ -245,7 +262,8 @@ function runEndTurn(): void {
   game.ui.recap = lines.length ? { t, lines } : null;
   for (const b of res.battles) pushSheet(battleSheet(game.s, b));
   if (game.s.over) pushSheet(overSheet(game.s, startNewGame));
-  else if (!res.battles.length) {
+  else queueChoice();
+  if (!game.s.over && !res.battles.length) {
     toast(`${SEASONS[season(game.s)]} ${year(game.s)} begins.${res.moved ? ` ${res.moved} farmers moved to the crafts.` : ''}`);
   }
 }
@@ -266,6 +284,7 @@ export const endTurn = (): void => {
 export const askNew = (): void => act(() => { game.ui.confirm = true; });
 export const setOneEach = (v: boolean): void => act(() => { game.ui.oneEach = v; });
 export const setRich = (v: boolean): void => act(() => { game.ui.rich = v; });
+export const setDecide = (v: boolean): void => act(() => { game.ui.decide = v; });
 export const setLevel = (v: Level): void => act(() => { game.ui.level = v; });
 export const setWild = (n: number): void => act(() => { game.ui.wild = n; });
 export const cancelNew = (): void => act(() => { game.ui.confirm = false; });
@@ -308,7 +327,9 @@ export const applyImport = (): void => act(() => {
   game.ui.open = [game.ui.sel]; game.ui.view = 'mine'; game.ui.recap = null; game.ui.scrollTo = game.ui.sel;
   game.sheets = [];
   game.ui.saveBox = { mode: 'closed', text: '', error: null, pending: null };
+  game.ui.decide = !!game.s.decide;
   if (game.s.over) pushSheet(overSheet(game.s, startNewGame));
+  else queueChoice();
   toast('Save loaded.');
 });
 /** Copy the exported text; on browsers that refuse, the box is already selectable. */

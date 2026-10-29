@@ -68,7 +68,15 @@ export interface GameState {
   goals?: Record<string, number>;
   /** living realm tallies for the end-of-reign summary */
   stats?: { taken: number; lost: number };
+  /** "Choices" rules are on: events ask you what to do. Absent in a classic game. */
+  decide?: boolean;
+  /** an event waiting for your answer; settled with its default when the season ends */
+  pending?: Pending;
 }
+
+export type ChoiceKind = 'plague' | 'bumper' | 'bandits' | 'caravan';
+/** An event that waits for a decision. `n` is the rolled amount: people the plague would kill, grain, the bandits' demand, or tolls. */
+export interface Pending { kind: ChoiceKind; c: number; n: number; t: number; band?: number }
 
 export interface BattleReport {
   from: string;
