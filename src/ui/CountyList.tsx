@@ -2,7 +2,7 @@
 // Open, it holds the county's controls (work, policy, troops, orders), so you can run the realm without stepping from county to county.
 import { useEffect, useState } from 'preact/hooks';
 import {
-  FORT, KINDS, NB, NEUTRAL, garrisonHold, oldLord, pendingTitle, rebels, remembers, revoltChance, sinceStamp, UNREST_BELOW, RATION, SEASONS, TAX, U, atkMult, atkOf, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fortMult, idlePct, prod, season, seenTroops, START_YEAR, taxGold, upkeep,
+  FORT, KINDS, NB, NEUTRAL, garrisonHold, oldLord, pendingTitle, rebels, remembers, revoltChance, sinceStamp, UNREST_BELOW, RATION, SEASONS, TAX, U, atkMult, atkOf, canAfford, capOf, craft, defence, eat, estDef, farmLimit, fieldWorkers, harvestForecast, fortMult, idlePct, prod, season, seenTroops, START_YEAR, taxGold, upkeep,
   type County, type GameState, type Work,
 } from '../game';
 import { countyFlags } from './attention';
@@ -142,7 +142,7 @@ function Card({ s, c }: { s: GameState; c: County }) {
 }
 
 function OwnSummary({ s, c }: { s: GameState; c: County }) {
-  const se = season(s), p = prod(c, se), id = idlePct(c);
+  const se = season(s), p = prod(c, se, s.crops), id = idlePct(c);
   const net: [string, number][] = [
     ['gold', taxGold(c) + craft(c) - upkeep(c)],
     ['grain', p.grain - eat(c)],
@@ -226,8 +226,26 @@ function OwnBody({ s, c }: { s: GameState; c: County }) {
   );
 }
 
+/** Crop year rules: fields, crop and harvest of one county. */
+function CropNote({ s, c }: { s: GameState; c: County }) {
+  const se = season(s), cap = Math.round(fieldWorkers(c)), farmers = Math.round((c.pop * c.work.farm) / 100);
+  const sown = Math.round(se === 0 ? Math.min(farmers, cap) : c.sown ?? 0), crop = Math.round(harvestForecast(c, se));
+  return (
+    <div class="row">
+      <div class="grow">
+        <b>Crop year</b>
+        <small>{se === 3 ? 'Winter: the fields rest. Sowing starts in spring.'
+          : `Land holds ${cap} workers · ${farmers} farming · ${se === 0 ? 'to sow' : 'sown'} ${sown} · harvest ≈ ${crop} grain in autumn`}</small>
+        <small>{se === 0 ? (farmers >= cap ? 'Fields full: more farmers would have no land.' : farmers < c.pop ? 'Fields left empty: more farmers would sow more.' : 'Everyone is sowing.')
+          : se === 1 ? 'Summer: keep at least as many farmers as were sown, or part of the crop is lost. More cannot add to it.'
+          : se === 2 ? (farmers < sown ? 'Too few farmers: the rest of the crop will rot.' : 'Enough hands to bring in the crop.') : ''}</small>
+      </div>
+    </div>
+  );
+}
+
 function WorkPane({ s, c }: { s: GameState; c: County }) {
-  const se = season(s), p = prod(c, se), lim = farmLimit(c, se);
+  const se = season(s), p = prod(c, se, s.crops), lim = farmLimit(c, se, s.crops);
   return (
     <div class="rows">
       {game.ui.full && <CountyScene s={s} c={c} />}
@@ -239,7 +257,8 @@ function WorkPane({ s, c }: { s: GameState; c: County }) {
       {(['farm', 'wood', 'mine'] as const).map((k) => {
         const n = Math.round((c.pop * c.work[k]) / 100);
         const out =
-          k === 'farm' ? `${se === 3 ? 'Nothing grows in winter' : '+' + Math.round(p.grain) + ' grain'} · limit ${lim}%`
+          k === 'farm' ? (s.crops ? `${se === 3 ? 'Fields rest in winter' : se === 2 ? '+' + Math.round(p.grain) + ' grain now' : '≈' + Math.round(harvestForecast(c, se)) + ' grain at harvest'} · limit ${lim}%`
+            : `${se === 3 ? 'Nothing grows in winter' : '+' + Math.round(p.grain) + ' grain'} · limit ${lim}%`)
           : k === 'wood' ? `+${Math.round(p.wood)} wood`
           : c.i === 0 ? 'No ore here' : `+${p.iron.toFixed(1)} iron`;
         const plusOff = idlePct(c) < 5 || (k === 'mine' && c.i === 0) || (k === 'farm' && c.work.farm + 5 > lim);
@@ -255,6 +274,7 @@ function WorkPane({ s, c }: { s: GameState; c: County }) {
         );
       })}
       <div class="row"><div class="grow"><b>Townsfolk and crafts</b><small>{idlePct(c)}% · +{craft(c).toFixed(1)} gold</small></div></div>
+      {s.crops && <CropNote s={s} c={c} />}
       <p class="note">
         The fields can only use so many people in a season ({SEASONS[se]}: up to {lim}% here, more on good soil). When a new season starts with more farmers than that, the extra people move to the crafts and earn gold. Your farming choice returns when the limit allows.
       </p>

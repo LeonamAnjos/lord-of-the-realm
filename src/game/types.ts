@@ -36,6 +36,8 @@ export interface County {
   /** unrest rules: the lord you took this county from (-1 for no lord), and the turn you took it */
   was?: number;
   since?: number;
+  /** crop year rules: people-worth of crop standing in the fields (sown in spring, kept by tending in summer, reaped in autumn) */
+  sown?: number;
 }
 
 export interface Lord {
@@ -77,6 +79,8 @@ export interface GameState {
   unrest?: boolean;
   /** unrest rules: the rivals are allied against you right now */
   league?: boolean;
+  /** "Crop year" rules are on: sow in spring, tend in summer, harvest in autumn; the soil limits how many people the fields can use. Absent in a classic game. */
+  crops?: boolean;
   /** an event waiting for your answer; settled with its default when the season ends */
   pending?: Pending;
 }

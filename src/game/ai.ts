@@ -1,7 +1,7 @@
 import { FORT, NB, RULES, U } from './data';
 import { recruit } from './actions';
 import { doSend, doSendMany, pick } from './combat';
-import { eat, farmLimit, marketPrice } from './economy';
+import { SEASONS_TO_HARVEST, eat, farmLimit, marketPrice } from './economy';
 import { index, type Rng } from './rng';
 import { atkMult, atkOf, counties, defence, movable, season, total } from './state';
 import type { BattleReport, County, GameState, Kind } from './types';
@@ -59,8 +59,8 @@ export function aiParams(s: GameState, l: number) {
 type Params = ReturnType<typeof aiParams>;
 
 /** Farm % a rival sets on a county: by how many seasons of meals its grain covers, held to the season's limit. */
-export const aiFarmPct = (secure: number, c: County, se: number): number =>
-  Math.min(secure < AI.farm.tightBelowSecurity ? AI.farm.tight : secure > AI.farm.safeAboveSecurity ? AI.farm.safe : AI.farm.normal, farmLimit(c, se));
+export const aiFarmPct = (secure: number, c: County, se: number, crops = false): number =>
+  Math.min((secure < AI.farm.tightBelowSecurity ? AI.farm.tight : secure > AI.farm.safeAboveSecurity ? AI.farm.safe : AI.farm.normal) + (crops ? AI.farm.cropsExtra : 0), farmLimit(c, se, crops));
 
 /** A turtle raises one fort level a turn on a frontier county, keeping a little gold back. */
 function aiFort(s: GameState, l: number, P: Params): void {
@@ -163,16 +163,18 @@ export function aiTurn(s: GameState, rng: Rng, l: number, pending?: BattleReport
   const L = s.lords[l]!, cs = counties(s, l);
   if (!cs.length) return;
   const need = cs.reduce((a, c) => a + eat(c), 0);
-  const secure = L.stock.grain / Math.max(1, need);
   const se = season(s);
+  /* crop year: grain must last until the autumn harvest, not just the season */
+  const span = s.crops ? Math.max(1, SEASONS_TO_HARVEST[se]) : 1;
+  const secure = L.stock.grain / Math.max(1, need * span);
   for (const c of cs) {
-    c.work.farm = aiFarmPct(secure, c, se);
+    c.work.farm = aiFarmPct(secure, c, se, !!s.crops);
     c.work.wood = AI.wood;
     c.work.mine = c.i >= AI.mine.richOre ? AI.mine.rich : c.i >= AI.mine.someOre ? AI.mine.some : 0;
   }
   for (const c of cs) c.tax = c.mood < AI.tax.noneBelowMood ? 0 : c.mood < AI.tax.lowBelowMood ? 1 : c.mood > AI.tax.highAboveMood ? 3 : 2;
   if (secure < AI.buyGrain.belowSecurity && L.stock.gold > AI.buyGrain.minGold) {
-    const buy = Math.min(Math.floor((L.stock.gold * AI.buyGrain.goldShare) / AI.buyGrain.pricePerGrain), Math.ceil(need * AI.buyGrain.coverSeasons - L.stock.grain));
+    const buy = Math.min(Math.floor((L.stock.gold * AI.buyGrain.goldShare) / AI.buyGrain.pricePerGrain), Math.ceil(need * span * AI.buyGrain.coverSeasons - L.stock.grain));
     if (buy > 0) { L.stock.gold -= buy * AI.buyGrain.pricePerGrain; L.stock.grain += buy; }
   }
   const P = aiParams(s, l);

@@ -110,6 +110,7 @@ export function helpSheet(): Sheet {
         <li>Tax brings gold but unhappy people work less and leave. Watch the mood bar.</li>
         <li>Muster troops in a county's card (Counties tab, Troops). Spearmen defend, archers and knights attack. Troops that were mustered or moved this season march next season.</li>
         <li>Send troops from the Orders list. Tap Split to choose 10% to 100% of each troop type, then send them in one tap. Win battles to take counties. Hold all twelve to be crowned.</li>
+        <li>With the Crop year rule, farmers sow in spring, tend the crop in summer and reap it in autumn. Spring and summer bring no grain, so the store must last. The soil sets how many people the fields can use: a small county cannot fill good land, and a big one has idle hands.</li>
         <li>The fields can only use so many farmers in each season. Extra farmers move to the crafts and earn gold. The numbers on your tiles are the share of people farming, cutting wood, mining and in crafts.</li>
       </ul>
     ),

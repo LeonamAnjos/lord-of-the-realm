@@ -4,13 +4,38 @@ import { capOf, clamp, counties, idlePct, logEv, season, troops, upkeep, zero } 
 import type { County, GameState, Stock } from './types';
 import { banditStrength, pendingTitle } from './choices';
 
-const P = RULES.production, M = RULES.mood, POP = RULES.population, FAM = RULES.famine, MK = RULES.market, EV = RULES.events;
+const CR = RULES.crops, P = RULES.production, M = RULES.mood, POP = RULES.population, FAM = RULES.famine, MK = RULES.market, EV = RULES.events;
 
-/** Per-season production of one county in season `s`. */
-export function prod(c: County, s: number) {
+/** Crop year rules: how many people the fields of a county can use. Better soil has more fields. */
+export const fieldWorkers = (c: County): number => CR.workersBase + CR.workersPerSoil * c.f;
+const farmers = (c: County): number => (c.pop * c.work.farm) / 100;
+
+/**
+ * Crop year rules: the crop standing in the fields (in people-worth) once season `se` has run.
+ * Spring: whoever farms sows, up to what the land holds. Summer: only the sown crop that gets tended survives.
+ * Autumn: the harvest takes it. Winter: the fields lie empty.
+ */
+export function sownAfter(c: County, se: number): number {
+  if (se === 0) return Math.min(farmers(c), fieldWorkers(c));
+  if (se === 1) return Math.min(c.sown ?? 0, farmers(c));
+  return se === 2 ? (c.sown ?? 0) : 0;
+}
+
+/** Crop year rules: seasons the store must feed everyone alone before grain comes in, by current season. */
+export const SEASONS_TO_HARVEST = [2, 1, 0, 3] as const;
+
+/** Crop year rules: grain the autumn harvest would bring at today's jobs and mood, as seen from season `se`. */
+export function harvestForecast(c: County, se: number): number {
+  if (se === 3) return 0;
+  const crop = se === 2 ? Math.min(farmers(c), c.sown ?? 0) : sownAfter(c, se);
+  return crop * P.grainPerFarmer * c.f * CR.harvestMult * (P.moodFloor + (P.moodRange * c.mood) / 100);
+}
+
+/** Per-season production of one county in season `s`. With the crop year rules all grain comes in autumn, from what was sown. */
+export function prod(c: County, s: number, crops = false) {
   const f = P.moodFloor + (P.moodRange * c.mood) / 100;
   return {
-    grain: ((c.pop * c.work.farm) / 100) * P.grainPerFarmer * c.f * FARM_MULT[s]! * f,
+    grain: crops ? (s === 2 ? harvestForecast(c, 2) : 0) : farmers(c) * P.grainPerFarmer * c.f * FARM_MULT[s]! * f,
     wood: ((c.pop * c.work.wood) / 100) * c.w * WOOD_MULT[s]! * f,
     iron: ((c.pop * c.work.mine) / 100) * P.ironPerMiner * c.i * f,
   };
@@ -25,7 +50,7 @@ export const taxGold = (c: County): number => c.pop * TAX[c.tax]!.g;
 export function realmFed(s: GameState, lord = 0): boolean {
   const se = season(s);
   let g = s.lords[lord]!.stock.grain;
-  for (const c of counties(s, lord)) g += prod(c, se).grain - eat(c);
+  for (const c of counties(s, lord)) g += prod(c, se, s.crops).grain - eat(c);
   return g >= 0;
 }
 
@@ -47,7 +72,8 @@ export function popRate(c: County, mood: number, fed: boolean): number {
 }
 
 /** Most people the fields can use in a season. Better soil supports more. */
-export function farmLimit(c: County, s: number): number {
+export function farmLimit(c: County, s: number, crops = false): number {
+  if (crops) return s === 3 ? 0 : Math.min(100, Math.floor((100 * fieldWorkers(c)) / c.pop / P.farmLimitStep) * P.farmLimitStep);
   return Math.min(100, Math.floor((FARM_LIMIT[s]! * (P.farmLimitSoilFloor + P.farmLimitSoilRange * c.f)) / P.farmLimitStep) * P.farmLimitStep);
 }
 
@@ -55,7 +81,7 @@ export function farmLimit(c: County, s: number): number {
 export function applyFarmLimit(s: GameState, c: County): number {
   const want = c.farmPref === undefined ? c.work.farm : c.farmPref;
   const free = 100 - c.work.wood - c.work.mine;
-  const nf = Math.max(0, Math.min(want, farmLimit(c, season(s)), free));
+  const nf = Math.max(0, Math.min(want, farmLimit(c, season(s), !!s.crops), free));
   const old = c.work.farm;
   c.work.farm = nf;
   return old > nf ? Math.round((c.pop * (old - nf)) / 100) : 0;
@@ -79,7 +105,7 @@ export function forecast(s: GameState, lord: number): Stock {
   const se = season(s);
   const o: Stock = { gold: 0, grain: 0, wood: 0, iron: 0 };
   for (const c of counties(s, lord)) {
-    const p = prod(c, se);
+    const p = prod(c, se, s.crops);
     o.grain += p.grain - eat(c);
     o.wood += p.wood;
     o.iron += p.iron;
@@ -95,13 +121,16 @@ export function economyTick(s: GameState): void {
     const L = s.lords[l]!;
     if (!L.alive) continue;
     const cs = counties(s, l);
-    let gr = 0, wd = 0, ir = 0, need = 0, gold = 0;
+    let gr = 0, wd = 0, ir = 0, need = 0, gold = 0, rotted = 0;
     for (const c of cs) {
-      const p = prod(c, se);
+      const p = prod(c, se, s.crops);
+      if (s.crops && l === 0 && se === 2) rotted += Math.max(0, (c.sown ?? 0) - farmers(c));
+      if (s.crops) c.sown = sownAfter(c, se) * (se === 2 ? 0 : 1);
       gr += p.grain; wd += p.wood; ir += p.iron;
       need += eat(c);
       gold += taxGold(c) + craft(c) - upkeep(c);
     }
+    if (rotted >= 1) logEv(s, `Too few hands at harvest: about ${Math.round(rotted * P.grainPerFarmer * CR.harvestMult)} grain of crop was left to rot.`, 'warn');
     const avail = L.stock.grain + gr;
     const fed = avail >= need;
     const ratio = need > 0 ? Math.min(1, avail / need) : 1;

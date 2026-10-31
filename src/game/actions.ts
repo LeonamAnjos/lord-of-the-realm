@@ -37,7 +37,7 @@ export function unmuster(s: GameState, c: County, k: Kind, n: number): boolean {
 export function setWork(s: GameState, c: County, k: keyof Work, dl: number): boolean {
   const nx = c.work[k] + dl;
   if (nx < 0 || (dl > 0 && idlePct(c) < dl) || (dl > 0 && k === 'mine' && c.i === 0)) return false;
-  if (k === 'farm' && dl > 0 && nx > farmLimit(c, s.turn % 4)) return false;
+  if (k === 'farm' && dl > 0 && nx > farmLimit(c, s.turn % 4, !!s.crops)) return false;
   c.work[k] = nx;
   if (k === 'farm') c.farmPref = nx;
   return true;

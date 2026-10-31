@@ -58,6 +58,7 @@ export function parseSave(text: string | null): Loaded | null {
     over: (s.over ?? null) as Over, log: s.log ?? [],
     ...(s.rich ? { rich: true, goals: s.goals ?? {}, stats: s.stats ?? { taken: 0, lost: 0 } } : {}),
     ...(s.unrest ? { unrest: true, ...(s.league ? { league: true } : {}) } : {}),
+    ...(s.crops ? { crops: true } : {}),
     ...(s.decide ? { decide: true, ...(s.pending ? { pending: s.pending } : {}) } : {}),
     ...(s.level === 'easy' || s.level === 'hard' ? { level: s.level } : {}),
   };

@@ -78,6 +78,14 @@
     "farmLimitStep": 5
   },
 
+  "crops": {
+    "workersBase": 10,
+    "workersPerSoil": 60,
+    "harvestMult": 4.1,
+    "startGrain": 400,
+    "captureKeeps": 0.5
+  },
+
   "mood": {
     "fed": 2,
     "famine": -15,
@@ -149,7 +157,7 @@
   },
 
   "ai": {
-    "farm": { "tight": 55, "normal": 45, "safe": 35, "tightBelowSecurity": 1.6, "safeAboveSecurity": 3.2 },
+    "farm": { "tight": 55, "normal": 45, "safe": 35, "tightBelowSecurity": 1.6, "safeAboveSecurity": 3.2, "cropsExtra": 5 },
     "wood": 18,
     "mine": { "rich": 25, "some": 8, "richOre": 0.6, "someOre": 0.3 },
     "tax": { "noneBelowMood": 25, "lowBelowMood": 42, "highAboveMood": 75 },
