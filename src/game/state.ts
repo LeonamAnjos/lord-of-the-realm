@@ -21,6 +21,8 @@ export interface NewGameOptions {
   decide?: boolean;
   /** conquered counties may revolt, and rivals band together against you when you lead */
   unrest?: boolean;
+  /** sow in spring, tend in summer, harvest in autumn */
+  crops?: boolean;
   level?: Level;
 }
 
@@ -41,6 +43,7 @@ export function newGame(rng: Rng, seed: number, opts: NewGameOptions = {}): Game
     { name: 'Earl Godfrey Ashby', short: 'Earl Godfrey', tax: 2, alive: true, stock: stock() },
   ];
   const level = opts.level ?? 'normal';
+  if (opts.crops) for (const l of lords) l.stock.grain = RULES.crops.startGrain;
   for (const l of lords.slice(1)) l.stock.gold += RULES.difficulty[level].rivalGold;
   const C: County[] = DEF.map((d, i) => ({
     id: i, name: d[0], f: d[1], w: d[2], i: d[3], owner: OWN[i]!,
@@ -88,6 +91,10 @@ export function newGame(rng: Rng, seed: number, opts: NewGameOptions = {}): Game
   if (level !== 'normal') s.level = level;
   if (opts.decide) s.decide = true;
   if (opts.unrest) s.unrest = true;
+  if (opts.crops) {
+    s.crops = true;
+    s.log.push({ t: 0, k: '', txt: 'The crop year: fields are sown in spring, tended in summer and reaped in autumn. Nothing is harvested before autumn, so your granary must last.' });
+  }
   if (opts.rich) {
     s.rich = true; s.goals = {}; s.stats = { taken: 0, lost: 0 };
     const P = RULES.personalities;

@@ -56,6 +56,7 @@ export function battle(s: GameState, rng: Rng, from: County, to: County, m: Unit
     to.pop = Math.max(B.conqueredPopMin, Math.round(to.pop * B.conqueredPopKeeps)); to.mood = B.conqueredMood; to.fort = Math.max(0, to.fort - B.conqueredFortLoss);
     to.work = defaultWork(to.i);
     to.farmPref = RULES.start.work.farm;
+    if (s.crops) to.sown = Math.floor((to.sown ?? 0) * RULES.crops.captureKeeps);
     applyFarmLimit(s, to);
   } else {
     to.g = applyLoss(to.g, clamp((B.lossFactor * atk) / def, B.lossMin, B.lossMax), rep.lostD);

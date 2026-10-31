@@ -1,4 +1,4 @@
-import { NB, inLeague, leagueAt, oldLord, pendingTitle, remembers, revoltChance, atkMult, atkOf, counties, estDef, farmLimit, forecast, idlePct, lordName, moodDelta, movable, season, threats, troops, type County, type GameState } from '../game';
+import { SEASONS_TO_HARVEST, eat, fieldWorkers, NB, inLeague, leagueAt, oldLord, pendingTitle, remembers, revoltChance, atkMult, atkOf, counties, estDef, farmLimit, forecast, idlePct, lordName, moodDelta, movable, season, threats, troops, type County, type GameState } from '../game';
 
 export interface Warn {
   key: string;
@@ -19,6 +19,10 @@ export function attention(s: GameState): Warn[] {
   const st = s.lords[0]!.stock, f = forecast(s, 0), w: Warn[] = [];
   if (s.pending) w.push({ key: 'choice', text: `Decision waiting: ${pendingTitle(s, s.pending)}` });
   if (st.grain + f.grain < 0) w.push({ key: 'grain', text: 'Grain runs out: buy grain or farm more' });
+  if (s.crops) {
+    const n = SEASONS_TO_HARVEST[season(s)], meals = counties(s, 0).reduce((a, c) => a + eat(c), 0);
+    if (n > 1 && st.grain < meals * n) w.push({ key: 'harvest', text: `Grain will not last to the harvest: ${Math.floor(st.grain)} in store, about ${Math.round(meals * n)} needed. Buy grain or set scant rations` });
+  }
   if (st.gold + f.gold < 0) w.push({ key: 'gold', text: 'Treasury runs dry: soldiers will desert' });
   for (const c of counties(s, 0)) if (c.mood < 20) w.push({ key: 'u' + c.id, text: `Unrest in ${c.name}`, sel: c.id });
   for (const c of counties(s, 0)) {
@@ -57,6 +61,8 @@ export function countyFlags(s: GameState, c: County): Flag[] {
   if (foes.some((n) => n.owner > 0) && troops(c) === 0) f.push({ tone: 'warn', text: 'No garrison' });
   if (!foes.length && troops(c) >= 20) f.push({ tone: 'info', text: 'Army far from border' });
   if (foes.some((n) => canBreak(c, n))) f.push({ tone: 'good', text: 'Can attack' });
-  if (c.work.farm + 5 <= farmLimit(c, se) && idlePct(c) >= 5) f.push({ tone: 'info', text: 'Fields not full' });
+  if (s.crops && se === 0 && c.pop * c.work.farm / 100 < fieldWorkers(c) && c.work.farm + 5 <= farmLimit(c, se, true) && idlePct(c) >= 5) f.push({ tone: 'info', text: 'Fields left empty' });
+  else if (s.crops && se === 1 && (c.sown ?? 0) > c.pop * c.work.farm / 100 + 0.5) f.push({ tone: 'warn', text: 'Crop poorly tended' });
+  else if (!s.crops && c.work.farm + 5 <= farmLimit(c, se) && idlePct(c) >= 5) f.push({ tone: 'info', text: 'Fields not full' });
   return f;
 }

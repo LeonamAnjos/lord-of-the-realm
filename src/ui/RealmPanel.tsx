@@ -1,8 +1,8 @@
-import { RULES, SEASONS, goalRows, personality, NEUTRAL, bordersYou, buyCost, counties, eat, prod, sellGain, season, year, type GameState } from '../game';
+import { RULES, SEASONS, SEASONS_TO_HARVEST, goalRows, personality, NEUTRAL, bordersYou, buyCost, counties, eat, prod, sellGain, season, year, type GameState } from '../game';
 import { LORD_COL } from './format';
 import { Section } from './Section';
 import {
-  applyImport, askNew, buyLot, cancelNew, setLevel, setOneEach, setRich, setDecide, setUnrest, setFullRealm, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, sellLot, showHelp, startNewGame, typeImport,
+  applyImport, askNew, buyLot, cancelNew, setLevel, setOneEach, setRich, setDecide, setUnrest, setCrops, setFullRealm, setWild, checkImport, closeSaveBox, copyExport, game, openExport, openImport, sellLot, showHelp, startNewGame, typeImport,
 } from './store';
 
 export function RealmPanel({ s }: { s: GameState }) {
@@ -86,6 +86,11 @@ export function RealmPanel({ s }: { s: GameState }) {
               <button class={'btn' + (!game.ui.unrest ? ' on' : '')} aria-pressed={!game.ui.unrest} onClick={() => setUnrest(false)}>Stay quiet</button>
               <button class={'btn' + (game.ui.unrest ? ' on' : '')} aria-pressed={game.ui.unrest} onClick={() => setUnrest(true)}>Unrest</button>
             </div>
+            <p class="note" style={{ marginBottom: '4px' }}>Farming: with the Crop year you sow in spring, tend in summer and harvest in autumn. Nothing is harvested before autumn, and the soil limits how many people the fields can use:</p>
+            <div class="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: '8px' }}>
+              <button class={'btn' + (!game.ui.crops ? ' on' : '')} aria-pressed={!game.ui.crops} onClick={() => setCrops(false)}>Every season</button>
+              <button class={'btn' + (game.ui.crops ? ' on' : '')} aria-pressed={game.ui.crops} onClick={() => setCrops(true)}>Crop year</button>
+            </div>
             <p class="note" style={{ marginBottom: '4px' }}>How hard the rivals play:</p>
             <div class="seg" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '8px' }}>
               {(['easy', 'normal', 'hard'] as const).map((lv) => (
@@ -110,7 +115,7 @@ export function RealmPanel({ s }: { s: GameState }) {
 
 /** One tap for the plain game or every extra rule at once; the switches below still set each one. */
 function Rules() {
-  const u = game.ui, on = [u.rich, u.decide, u.unrest], full = on.every(Boolean), plain = !on.some(Boolean);
+  const u = game.ui, on = [u.rich, u.decide, u.unrest, u.crops], full = on.every(Boolean), plain = !on.some(Boolean);
   return (
     <>
       <p class="note" style={{ marginBottom: '4px' }}>Rules:</p>
@@ -119,9 +124,9 @@ function Rules() {
         <button class={'btn' + (full ? ' on' : '')} aria-pressed={full} onClick={() => setFullRealm(true)}>Full realm</button>
       </div>
       <p class="note" style={{ marginBottom: '8px' }}>
-        {full ? 'Full realm: living realm, events you choose and unrest, all on. Harder: expect to win about half as often as in a classic game.'
-          : plain ? 'Classic: the original rules. Full realm turns on all three extras below.'
-          : `Your own mix: ${on.filter(Boolean).length} of the 3 extras below are on.`}
+        {full ? 'Full realm: living realm, events you choose, unrest and the crop year, all on. Harder: expect to win about half as often as in a classic game.'
+          : plain ? 'Classic: the original rules. Full realm turns on all four extras below.'
+          : `Your own mix: ${on.filter(Boolean).length} of the 4 extras below are on.`}
       </p>
     </>
   );
@@ -130,7 +135,7 @@ function Rules() {
 /** Will everyone eat this season, and how long the store lasts. Grain is the one stock shared by every county. */
 function Food({ s }: { s: GameState }) {
   const se = season(s), st = Math.floor(s.lords[0]!.stock.grain), mine = counties(s, 0);
-  const harvest = Math.round(mine.reduce((a, c) => a + prod(c, se).grain, 0)), meals = Math.round(mine.reduce((a, c) => a + eat(c), 0));
+  const harvest = Math.round(mine.reduce((a, c) => a + prod(c, se, s.crops).grain, 0)), meals = Math.round(mine.reduce((a, c) => a + eat(c), 0));
   const left = st + harvest - meals, fed = left >= 0, lasts = meals > 0 ? Math.floor(st / meals) : 0;
   return (
     <Section id="food" title="Food">
@@ -144,7 +149,8 @@ function Food({ s }: { s: GameState }) {
         <p class="note">
           {fed ? `Without a harvest, the store alone feeds your people and soldiers for about ${lasts} ${lasts === 1 ? 'season' : 'seasons'}.`
             : 'When the realm goes hungry every county loses mood, people leave and troops desert. Buy grain at the market, farm more or set scant rations.'}
-          {se !== 3 && fed && ` Winter grows nothing, so keep about ${meals} grain for it.`}
+          {s.crops && ` Crop year: nothing is harvested before autumn. Seasons the store must cover on its own: ${SEASONS_TO_HARVEST[se]}${meals > 0 ? ` (needs about ${meals * SEASONS_TO_HARVEST[se]!} grain, you hold ${st})` : ''}.`}
+          {!s.crops && se !== 3 && fed && ` Winter grows nothing, so keep about ${meals} grain for it.`}
         </p>
       </div>
     </Section>

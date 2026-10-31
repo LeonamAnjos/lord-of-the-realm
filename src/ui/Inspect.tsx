@@ -50,9 +50,9 @@ export function InspectCounty({ s, c }: { s: GameState; c: County }) {
 }
 
 function Work({ s, c }: { s: GameState; c: County }) {
-  const se = season(s), p = prod(c, se), lim = farmLimit(c, se);
+  const se = season(s), p = prod(c, se, s.crops), lim = farmLimit(c, se, s.crops);
   const L = s.lords[c.owner]!, need = s.C.filter((x) => x.owner === c.owner).reduce((a, x) => a + eat(x), 0), secure = L.stock.grain / Math.max(1, need);
-  const nextFarm = aiFarmPct(secure, c, se);
+  const nextFarm = aiFarmPct(secure, c, se, s.crops);
   const rows: [string, number, string][] = [
     ['Farmland', c.work.farm, `+${Math.round(p.grain)} grain · limit ${lim}%`],
     ['Woodcutters', c.work.wood, `+${Math.round(p.wood)} wood`],

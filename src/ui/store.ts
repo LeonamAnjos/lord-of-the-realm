@@ -51,6 +51,7 @@ export interface Ui {
   decide: boolean;
   /** conquered counties in the next reign may revolt, and rivals ally against a leader */
   unrest: boolean;
+  crops: boolean;
   /** how hard the rivals play in the next reign */
   level: Level;
   /** open split dialogs, by "from-to" */
@@ -72,7 +73,7 @@ export const game = {
   fold: loadFolds(),
   s: undefined as unknown as GameState,
   rng: undefined as unknown as Rng,
-  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, rich: false, decide: false, unrest: false, level: 'normal', ctab: 'work', open: [], ctabs: {}, view: 'mine', sort: 'map', hover: null, scrollTo: null, recap: null, inspect: null, full: false, quick: null, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
+  ui: { sel: 4, tab: 'county', help: false, confirm: false, wild: 0, oneEach: false, rich: false, decide: false, unrest: false, crops: false, level: 'normal', ctab: 'work', open: [], ctabs: {}, view: 'mine', sort: 'map', hover: null, scrollTo: null, recap: null, inspect: null, full: false, quick: null, split: {}, saveBox: { mode: 'closed', text: '', error: null, pending: null } } as Ui,
   sheets: [] as Sheet[],
   toast: null as string | null,
   /** the board fades out while a season ends, then back in with the new one */
@@ -104,7 +105,7 @@ const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0]!;
 
 function begin(seed: number): void {
   game.rng = createRng(seed);
-  game.s = newGame(game.rng, seed, { unclaimed: game.ui.wild, oneEach: game.ui.oneEach, rich: game.ui.rich, decide: game.ui.decide, unrest: game.ui.unrest, level: game.ui.level });
+  game.s = newGame(game.rng, seed, { unclaimed: game.ui.wild, oneEach: game.ui.oneEach, rich: game.ui.rich, decide: game.ui.decide, unrest: game.ui.unrest, crops: game.ui.crops, level: game.ui.level });
   game.ui.quick = null;
 }
 
@@ -133,7 +134,7 @@ export function boot(): void {
     game.ui.sel = typeof u.sel === 'number' ? u.sel : 4;
     game.ui.tab = u.tab === 'realm' || u.tab === 'chronicle' ? u.tab : 'county';
     game.ui.help = !!u.help;
-    game.ui.rich = !!loaded.state.rich; game.ui.decide = !!loaded.state.decide; game.ui.unrest = !!loaded.state.unrest; game.ui.level = loaded.state.level ?? 'normal';
+    game.ui.rich = !!loaded.state.rich; game.ui.decide = !!loaded.state.decide; game.ui.unrest = !!loaded.state.unrest; game.ui.crops = !!loaded.state.crops; game.ui.level = loaded.state.level ?? 'normal';
   } else {
     begin(randomSeed());
   }
@@ -286,8 +287,9 @@ export const endTurn = (): void => {
 export const askNew = (): void => act(() => { game.ui.confirm = true; });
 export const setOneEach = (v: boolean): void => act(() => { game.ui.oneEach = v; });
 export const setRich = (v: boolean): void => act(() => { game.ui.rich = v; });
-/** Turn the living realm, events you choose and unrest on or off together. */
-export const setFullRealm = (v: boolean): void => act(() => { game.ui.rich = v; game.ui.decide = v; game.ui.unrest = v; });
+/** Turn the living realm, events you choose, unrest and the crop year on or off together. */
+export const setFullRealm = (v: boolean): void => act(() => { game.ui.rich = v; game.ui.decide = v; game.ui.unrest = v; game.ui.crops = v; });
+export const setCrops = (v: boolean): void => act(() => { game.ui.crops = v; });
 export const setUnrest = (v: boolean): void => act(() => { game.ui.unrest = v; });
 export const setDecide = (v: boolean): void => act(() => { game.ui.decide = v; });
 export const setLevel = (v: Level): void => act(() => { game.ui.level = v; });
@@ -332,7 +334,7 @@ export const applyImport = (): void => act(() => {
   game.ui.open = [game.ui.sel]; game.ui.view = 'mine'; game.ui.recap = null; game.ui.scrollTo = game.ui.sel;
   game.sheets = [];
   game.ui.saveBox = { mode: 'closed', text: '', error: null, pending: null };
-  game.ui.decide = !!game.s.decide; game.ui.unrest = !!game.s.unrest;
+  game.ui.decide = !!game.s.decide; game.ui.unrest = !!game.s.unrest; game.ui.crops = !!game.s.crops;
   if (game.s.over) pushSheet(overSheet(game.s, startNewGame));
   else queueChoice();
   toast('Save loaded.');

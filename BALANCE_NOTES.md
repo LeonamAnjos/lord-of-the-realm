@@ -42,3 +42,7 @@ Ideas: the pact could end when you drop below 7 only after a season's delay; res
 
 ## Full realm (living realm + events you choose + unrest)
 1000 bot games: classic 44%, living realm 42%, all three 21% (median win turn 30). Difficulty barely moves it with all three on: easy 24%, hard 24%. The unrest pressure swamps the AI's attack bar; a harder level may need to act on something else (rival gold, revolt chance).
+
+## Crop year (optional, `s.crops`)
+Sow in spring, tend in summer, reap in autumn. Spring and summer give no grain; autumn gives `4.1x` (the old three seasons added up), so a year yields what it did. Fields hold `10 + 60*soil` workers; more farmers than that are idle, fewer leave land empty. Everyone starts with 400 grain (the old 210 would starve in the first summer). Numbers in `rules.json` `crops`.
+Rival AI in the crop year: grain security is measured against the seasons left until harvest (`SEASONS_TO_HARVEST`), so rivals buy grain to last that long, and they farm `ai.farm.cropsExtra` (5) points more. Bot wins over 1000 games: classic 41%, crop year before the change 75%, with the buying fix alone 60%, with +5 farming 41%, with +10 31%.
